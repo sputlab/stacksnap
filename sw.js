@@ -1,5 +1,5 @@
 // StackSnap Service Worker · PWA Offline Support
-const CACHE_NAME = 'stacksnap-v2.7.0';
+const CACHE_NAME = 'stacksnap-v2.9.0';
 
 const PRECACHE_ASSETS = [
     './',
