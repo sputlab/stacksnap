@@ -1,0 +1,1934 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<title>StackSnap · Arcade Plus</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&display=swap" rel="stylesheet">
+<style>
+    :root{
+        --void:#050810;
+        --panel:#0b0f1c;
+        --amber:#ffb454;
+        --gold:#ffdf9c;
+        --cyan:#5eead4;
+        --lime:#9dff6b;
+        --danger:#ff8a8a;
+        --font-ui:'Poppins', system-ui, sans-serif;
+        --font-pixel:'Press Start 2P', monospace;
+    }
+    * {
+        margin: 0;
+        padding: 0;
+        box-sizing: border-box;
+        user-select: none;
+        -webkit-tap-highlight-color: transparent;
+    }
+
+    html, body {
+        width: 100%;
+        height: 100%;
+        overflow: hidden;
+        position: fixed;
+        overscroll-behavior: none;
+    }
+
+    body {
+        background:
+            radial-gradient(circle at 15% 10%, rgba(94,234,212,0.06), transparent 45%),
+            radial-gradient(circle at 85% 90%, rgba(255,180,84,0.08), transparent 40%),
+            radial-gradient(circle at 20% 30%, #0e1a2a, #03060c 75%);
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        font-family: var(--font-ui);
+    }
+
+    .game-fullscreen {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        width: 100%;
+        height: 100%;
+        padding: 10px;
+    }
+
+    .brand {
+        text-align: center;
+        margin-bottom: 6px;
+        line-height: 1.3;
+    }
+    .brand-title {
+        font-family: var(--font-pixel);
+        font-size: 16px;
+        letter-spacing: 1px;
+        color: var(--gold);
+        text-shadow: 0 0 12px rgba(255,180,84,0.55), 0 2px 0 #3a1f00;
+    }
+    .brand-title span { color: var(--cyan); text-shadow: 0 0 12px rgba(94,234,212,0.6); }
+
+    .game-container {
+        background: linear-gradient(180deg, rgba(15,20,36,0.55), rgba(2,4,10,0.65));
+        border: 1px solid rgba(255,205,126,0.14);
+        border-radius: 42px;
+        padding: 16px 16px 14px 16px;
+        backdrop-filter: blur(8px);
+        box-shadow: 0 25px 50px -12px black, inset 0 1px 0 rgba(255,255,255,0.05);
+        position: relative;
+    }
+
+    @media (max-height: 720px), (max-width: 400px) {
+        .game-fullscreen { padding: 4px; }
+        .brand { margin-bottom: 3px; }
+        .brand-title { font-size: 13px; }
+        .game-container { padding: 8px 8px 10px 8px; border-radius: 26px; }
+        .stat-bar { margin-top: 6px; gap: 6px; }
+        .stat-chip { padding: 4px 10px; min-width: 46px; }
+        .stat-chip .stat-value { font-size: 16px; }
+        .restart-mini { width: 34px; height: 34px; font-size: 16px; }
+    }
+
+    canvas {
+        display: block;
+        margin: 0 auto;
+        border-radius: 26px;
+        box-shadow: 0 15px 35px rgba(0, 0, 0, 0.65), 0 0 0 1px rgba(255,255,255,0.04);
+        cursor: pointer;
+        background: #0b0f1c;
+        touch-action: none;
+    }
+
+    .stat-bar {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        margin-top: 10px;
+        gap: 8px;
+        flex-wrap: nowrap;
+    }
+
+    .stat-chip {
+        background: linear-gradient(160deg, #11162a, #06080f);
+        padding: 5px 13px;
+        border-radius: 16px;
+        text-align: center;
+        border: 1px solid rgba(255,180,84,0.35);
+        box-shadow: 0 4px 10px black;
+        position: relative;
+        transition: transform 0.12s ease;
+        min-width: 56px;
+    }
+    .stat-chip.bump { transform: scale(1.08); }
+
+    .stat-chip .stat-label {
+        font-size: 8px;
+        letter-spacing: 1.5px;
+        color: #8fa8dd;
+        font-weight: 600;
+        display: block;
+    }
+
+    .stat-chip .stat-value {
+        font-size: 19px;
+        font-weight: 800;
+        line-height: 1.2;
+        font-variant-numeric: tabular-nums;
+        display: block;
+    }
+    .stat-chip.score .stat-value { color: var(--gold); text-shadow: 0 2px 8px rgba(255,159,74,0.4); }
+    .stat-chip.blocks .stat-value { color: var(--cyan); }
+    .stat-chip.best .stat-value { color: #ffe6b0; }
+
+    .multiplier-badge {
+        position: absolute;
+        top: -10px;
+        right: -8px;
+        background: linear-gradient(135deg, var(--amber), var(--gold));
+        color: #241a05;
+        font-weight: bold;
+        font-size: 12px;
+        padding: 2px 7px;
+        border-radius: 50px;
+        box-shadow: 0 0 8px rgba(255,180,84,0.7);
+        font-family: monospace;
+        animation: pulse 0.8s infinite;
+    }
+
+    @keyframes pulse {
+        0% { transform: scale(1); opacity: 1;}
+        50% { transform: scale(1.12); opacity: 0.85;}
+        100% { transform: scale(1);}
+    }
+
+    .restart-mini {
+        background: linear-gradient(160deg, #313c5e, #1c2338);
+        border: 1px solid rgba(255,255,255,0.08);
+        color: #eef2ff;
+        font-size: 19px;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        cursor: pointer;
+        box-shadow: 0 4px 0 #10131f;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+        z-index: 300;
+    }
+    .restart-mini:active {
+        transform: translateY(2px);
+        box-shadow: 0 2px 0 #10131f;
+    }
+
+    /* Highscore Overlay (copre solo il canvas) */
+    .highscore-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(2,4,10,0.88);
+        backdrop-filter: blur(14px);
+        border-radius: 26px;
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        gap: 14px;
+        padding: 20px;
+        z-index: 100;
+        color: #ffefcf;
+        text-align: center;
+        animation: fadeIn 0.25s ease;
+    }
+    @keyframes fadeIn { from{opacity:0;} to{opacity:1;} }
+    .highscore-overlay h3 {
+        font-family: var(--font-pixel);
+        font-size: 18px;
+        margin-bottom: 6px;
+        color: var(--gold);
+        text-shadow: 0 0 10px rgba(255,180,84,0.5);
+    }
+    .highscore-list {
+        list-style: none;
+        width: 85%;
+        max-height: 190px;
+        overflow-y: auto;
+        font-size: 16px;
+        font-weight: bold;
+        background: rgba(0,0,0,0.45);
+        border-radius: 20px;
+        padding: 10px;
+    }
+    .highscore-list li {
+        display: flex;
+        justify-content: space-between;
+        padding: 6px 12px;
+        border-bottom: 1px solid rgba(255,205,126,0.15);
+    }
+    .highscore-list li:last-child { border-bottom: none; }
+    .lb-switch {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 2px;
+    }
+    .lb-switch-btn {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,205,126,0.25);
+        color: #cdd9ff;
+        font-family: var(--font-ui);
+        font-size: 11px;
+        font-weight: 600;
+        padding: 6px 14px;
+        border-radius: 30px;
+        cursor: pointer;
+    }
+    .lb-switch-btn.active {
+        background: linear-gradient(135deg, var(--amber), var(--gold));
+        color: #241a05;
+        border-color: transparent;
+    }
+    .score-recap {
+        font-size: 12.5px;
+        color: #cfe0ff;
+        margin-bottom: 2px;
+    }
+    .score-recap b { color: var(--gold); }
+    .splash-checkbox {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 13px;
+        color: #cfe0ff;
+        margin-top: 14px;
+        cursor: pointer;
+    }
+    .splash-checkbox input {
+        width: 16px;
+        height: 16px;
+        accent-color: var(--amber);
+        cursor: pointer;
+    }
+    .name-input-area {
+        display: flex;
+        gap: 8px;
+        margin-top: 6px;
+        width: 100%;
+        max-width: 280px;
+    }
+    .name-input-area input {
+        flex: 1 1 auto;
+        min-width: 0;
+        background: #1e243b;
+        border: 1px solid var(--gold);
+        border-radius: 40px;
+        padding: 10px 14px;
+        color: white;
+        font-weight: bold;
+        text-align: center;
+        font-size: 14px;
+        outline: none;
+        font-family: var(--font-ui);
+    }
+    .name-input-area button {
+        flex-shrink: 0;
+        background: linear-gradient(135deg, var(--amber), var(--gold));
+        border: none;
+        border-radius: 40px;
+        padding: 10px 16px;
+        font-weight: bold;
+        cursor: pointer;
+        font-size: 14px;
+        color: #241a05;
+        font-family: var(--font-ui);
+    }
+    .restart-big {
+        background: linear-gradient(160deg, var(--amber), var(--gold));
+        border: none;
+        color: #241a05;
+        font-family: var(--font-ui);
+        font-weight: 800;
+        font-size: 18px;
+        padding: 14px 42px;
+        border-radius: 60px;
+        cursor: pointer;
+        box-shadow: 0 6px 0 #8a5300, 0 10px 20px rgba(0,0,0,0.4);
+        margin-top: 4px;
+        letter-spacing: 0.5px;
+    }
+    .restart-big:active {
+        transform: translateY(4px);
+        box-shadow: 0 2px 0 #8a5300, 0 6px 14px rgba(0,0,0,0.4);
+    }
+    .hide-overlay {
+        display: none;
+    }
+
+    /* Burger menu */
+    .burger-menu {
+        position: absolute;
+        top: 18px;
+        right: 18px;
+        z-index: 200;
+    }
+    .burger-icon {
+        background: rgba(0,0,0,0.55);
+        backdrop-filter: blur(8px);
+        border-radius: 40px;
+        padding: 10px 12px;
+        cursor: pointer;
+        border: 1px solid rgba(255,205,126,0.4);
+    }
+    .burger-icon div {
+        width: 24px;
+        height: 3px;
+        background-color: var(--gold);
+        margin: 5px 0;
+        border-radius: 2px;
+    }
+    .menu-panel {
+        position: absolute;
+        top: 58px;
+        right: 0;
+        background: rgba(9,12,22,0.95);
+        backdrop-filter: blur(14px);
+        border-radius: 20px;
+        padding: 14px 18px;
+        width: 230px;
+        border: 1px solid rgba(255,205,126,0.4);
+        display: none;
+        flex-direction: column;
+        gap: 10px;
+        z-index: 210;
+        box-shadow: 0 12px 30px rgba(0,0,0,0.5);
+    }
+    .menu-panel a, .menu-panel .menu-item {
+        color: #ffe6c7;
+        text-decoration: none;
+        font-weight: 500;
+        font-size: 14px;
+        cursor: pointer;
+        background: none;
+        border: none;
+        text-align: left;
+        padding: 5px 2px;
+        font-family: var(--font-ui);
+    }
+    .menu-panel .menu-item:hover, .menu-panel a:hover { color: var(--gold); }
+    .close-menu {
+        background: none;
+        border: none;
+        color: var(--amber);
+        font-size: 20px;
+        cursor: pointer;
+        align-self: flex-end;
+    }
+
+    /* About Modal */
+    .modal {
+        display: none;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0,0,0,0.88);
+        z-index: 1000;
+        justify-content: center;
+        align-items: center;
+    }
+    .modal-content {
+        background: rgba(12,16,28,0.96);
+        backdrop-filter: blur(16px);
+        border-radius: 28px;
+        max-width: 500px;
+        width: 88%;
+        padding: 22px;
+        border: 1px solid rgba(255,205,126,0.4);
+        color: #f5e6c4;
+        max-height: 82vh;
+        overflow-y: auto;
+        position: relative;
+    }
+    .modal-close-x {
+        position: absolute;
+        top: 14px;
+        right: 14px;
+        width: 30px;
+        height: 30px;
+        border-radius: 50%;
+        background: rgba(255,255,255,0.08);
+        border: 1px solid rgba(255,205,126,0.35);
+        color: var(--gold);
+        font-size: 14px;
+        font-weight: bold;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10;
+    }
+    .modal-close-x:hover { background: rgba(255,180,84,0.25); }
+    .modal-content h2 {
+        margin-bottom: 2px;
+        font-size: 22px;
+        color: var(--gold);
+        display: flex;
+        align-items: baseline;
+        gap: 8px;
+        flex-wrap: wrap;
+    }
+    .by-tag {
+        font-size: 11px;
+        font-weight: 500;
+        color: #6f84b5;
+        font-family: var(--font-ui);
+    }
+    .modal-version {
+        font-size: 11px;
+        color: #5a6f9e;
+        font-family: monospace;
+        margin-bottom: 14px;
+    }
+    .modal-content p {
+        margin: 10px 0;
+        line-height: 1.45;
+        font-size: 14px;
+    }
+    .modal-content ul {
+        margin-left: 18px;
+        margin-bottom: 14px;
+    }
+    .modal-content li { font-size: 14px; margin: 4px 0; }
+    .reset-btn {
+        background: rgba(255,90,90,0.12);
+        border: 1px solid rgba(255,120,120,0.4);
+        color: #ff9a9a;
+        padding: 10px 18px;
+        border-radius: 40px;
+        font-weight: 600;
+        font-size: 12.5px;
+        cursor: pointer;
+        margin-top: 16px;
+        width: 100%;
+        font-family: var(--font-ui);
+    }
+    .reset-btn:hover { background: rgba(255,90,90,0.22); }
+    .modal-tabs {
+        display: flex;
+        gap: 6px;
+        margin-bottom: 14px;
+        flex-wrap: wrap;
+    }
+    .tab-btn {
+        background: rgba(255,255,255,0.05);
+        border: 1px solid rgba(255,205,126,0.25);
+        color: #cdd9ff;
+        font-family: var(--font-ui);
+        font-size: 12px;
+        font-weight: 600;
+        padding: 7px 12px;
+        border-radius: 30px;
+        cursor: pointer;
+    }
+    .tab-btn.active {
+        background: linear-gradient(135deg, var(--amber), var(--gold));
+        color: #241a05;
+        border-color: transparent;
+    }
+    .stats-list, .achv-list { list-style: none; }
+    .stats-list li {
+        display: flex;
+        justify-content: space-between;
+        padding: 8px 4px;
+        border-bottom: 1px solid rgba(255,205,126,0.12);
+        font-size: 14px;
+    }
+    .stats-list li b { color: var(--gold); }
+    .achv-list li {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 8px 6px;
+        border-bottom: 1px solid rgba(255,205,126,0.1);
+        opacity: 0.4;
+    }
+    .achv-list li.unlocked { opacity: 1; }
+    .achv-icon { font-size: 22px; width: 28px; text-align: center; }
+    .achv-name { font-weight: 700; font-size: 13px; color: var(--gold); }
+    .achv-desc { font-size: 11px; color: #9fb3d9; }
+
+    .version-box {
+        font-size: 12px;
+        color: #9fb3d9;
+        line-height: 1.6;
+    }
+    .version-box b { color: var(--amber); }
+    .version-box ul { margin-left: 14px; margin-bottom: 12px; }
+    .version-box li { font-size: 12px; margin: 2px 0; }
+</style>
+</head>
+<body>
+<div class="game-fullscreen">
+    <div class="brand">
+        <div class="brand-title">STACK<span>SNAP</span></div>
+    </div>
+
+    <div class="burger-menu">
+        <div class="burger-icon" id="burgerIcon">
+            <div></div><div></div><div></div>
+        </div>
+        <div class="menu-panel" id="menuPanel">
+            <button class="close-menu" id="closeMenuBtn">✕</button>
+            <button class="menu-item" id="guideBtn">📖 Guide</button>
+            <button class="menu-item" id="statsBtn">📊 Stats & Achievements</button>
+            <button class="menu-item" id="globalBtn">🌍 Global Leaderboard</button>
+            <button class="menu-item" id="changelogBtn">🕓 Changelog</button>
+            <button class="menu-item" id="muteBtn">🔊 Audio: ON</button>
+            <a href="https://www.sputlab.com/donate/" target="_blank" rel="noopener" id="supportLink">☕ Support the development</a>
+        </div>
+    </div>
+
+    <div class="game-container" style="position: relative;">
+        <canvas id="gameCanvas" width="480" height="700"></canvas>
+        <div id="highscoreOverlay" class="highscore-overlay hide-overlay">
+            <h3>🏆 LEADERBOARD</h3>
+            <div class="lb-switch">
+                <button class="lb-switch-btn active" id="lbLocalBtn">🏠 Local</button>
+                <button class="lb-switch-btn" id="lbGlobalBtn">🌍 Global</button>
+            </div>
+            <ul id="overlayHighscoreList" class="highscore-list"></ul>
+            <div id="overlayNameEntry">
+                <div class="score-recap" id="scoreRecap"></div>
+                <div class="name-input-area">
+                    <input type="text" id="overlayPlayerName" maxlength="16" placeholder="Your name">
+                    <button id="overlaySaveBtn">SAVE</button>
+                </div>
+            </div>
+            <button class="restart-big" id="restartButtonOverlay">⟳ PLAY AGAIN</button>
+        </div>
+
+        <div class="stat-bar">
+            <div class="stat-chip score" id="scoreChip">
+                <span class="stat-label">SCORE</span>
+                <span class="stat-value" id="scoreDisplay">0</span>
+                <div id="multiplierBadge" class="multiplier-badge" style="display: none;">x2</div>
+            </div>
+            <div class="stat-chip blocks">
+                <span class="stat-label">BLOCKS</span>
+                <span class="stat-value" id="blocksDisplay">0</span>
+            </div>
+            <div class="stat-chip best">
+                <span class="stat-label">BEST</span>
+                <span class="stat-value" id="bestDisplay">0</span>
+            </div>
+            <button class="restart-mini" id="restartButton" title="Play again">⟳</button>
+        </div>
+    </div>
+</div>
+
+<!-- Guide Modal -->
+<div id="guideModal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close-x" data-close="guideModal">✕</button>
+        <h2>📖 StackSnap <span class="by-tag">by Sputlab.com</span></h2>
+        <div class="modal-version" id="modalVersion"></div>
+        <div class="tab-content" id="tabGuide">
+            <p><strong>Goal:</strong> stack as many blocks as possible, centering the block that slides back and forth each time. The higher you climb, the faster the game gets and the scene turns to night: how high can you get?</p>
+            <p><strong>🎮 Controls:</strong> tap the screen, click with the mouse, or press the <strong>space bar</strong> to drop the block — all three work, pick whichever feels best. Press <strong>R</strong> at any time to restart instantly.</p>
+            <p><strong>Bonuses and power-ups:</strong></p>
+            <ul>
+                <li>🎯 <strong>Perfect:</strong> land exactly on the block below: 40 points total and extends your streak.</li>
+                <li>🔥 <strong>Streak x2:</strong> 3 Perfects in a row activate the x2 multiplier for the next 3 blocks.</li>
+                <li>⭐ <strong>Golden Tower:</strong> every 5 blocks, the next one is worth +50 extra points.</li>
+                <li>💎 <strong>Bonus crystals:</strong> appear now and then and last for the next 3 blocks:
+                    <ul>
+                        <li><span style="color:#8effff;">🐢 Blue (Slowmo):</span> slows down the sliding block.</li>
+                        <li><span style="color:#ffb347;">🎯 Orange (Precision):</span> a gap of up to 10% from the block below still counts as Perfect.</li>
+                        <li><span style="color:#ff6b6b;">💥 Red (Double Points):</span> every block is worth double the points.</li>
+                    </ul>
+                </li>
+                <li>💚 <strong>Perfect Zone:</strong> every 10 blocks a green line appears: hit it for triple points!</li>
+                <li>🛟 <strong>Safety net:</strong> the first time the block gets too narrow to continue, it's automatically restored — this happens only once per game.</li>
+                <li>🎉 <strong>Milestones:</strong> every 25 blocks triggers a little celebration with confetti and a fanfare.</li>
+            </ul>
+            <p><em>Unlock achievements and climb the local leaderboard to challenge your records — check out the other menu items too.</em></p>
+            <p><strong>🌍 Global Leaderboard:</strong> at the end of a run you can switch from the Local leaderboard (only on your device) to the Global one (shared with every player) using the switch at the top. Saving your name also submits your score to the global leaderboard, which is permanent and has no limits — tied scores share the same rank.</p>
+        </div>
+    </div>
+</div>
+
+<!-- Changelog Modal -->
+<div id="changelogModal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close-x" data-close="changelogModal">✕</button>
+        <h2>🕓 Changelog</h2>
+        <div class="version-box" id="versionBox"></div>
+    </div>
+</div>
+
+<!-- Splash Screen (quick rules) -->
+<div id="splashModal" class="modal">
+    <div class="modal-content">
+        <h2>🧱 Welcome to StackSnap!</h2>
+        <div class="modal-version" id="splashVersion"></div>
+        <p>Stack the blocks that slide back and forth, centering them as closely as you can. The higher you climb, the faster the game gets and the scene turns to night!</p>
+        <ul>
+            <li>🎮 Tap the screen, click, or press <strong>Space</strong> to drop the block.</li>
+            <li>🎯 A <strong>Perfect</strong> hit is worth 40 points and extends your streak.</li>
+            <li>🔥 3 Perfects in a row activate the <strong>x2</strong> multiplier for the next 3 blocks.</li>
+            <li>💎 Bonus crystals (last for the next 3 blocks): <strong style="color:#8effff;">blue</strong> slows the block, <strong style="color:#ffb347;">orange</strong> forgives a gap of up to 10%, <strong style="color:#ff6b6b;">red</strong> doubles your points.</li>
+            <li>🌍 At the end of a run you can save your score to the leaderboard, both local and global.</li>
+        </ul>
+        <label class="splash-checkbox">
+            <input type="checkbox" id="hideSplashCheckbox"> Don't show again
+        </label>
+        <button class="restart-big" id="splashStartBtn" style="width: 100%; margin-top: 10px;">PLAY! 🚀</button>
+    </div>
+</div>
+
+<!-- Global Leaderboard Modal -->
+<div id="globalModal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close-x" data-close="globalModal">✕</button>
+        <h2>🌍 Global Leaderboard</h2>
+        <p style="font-size: 12px; color: #9fb3d9; margin-bottom: 10px;">Every player's scores, with no limits. Tied scores share the same rank.</p>
+        <ul class="highscore-list" id="globalModalList" style="width: 100%; max-height: 52vh;"></ul>
+        <button class="reset-btn" id="refreshGlobalBtn" style="background: rgba(94,234,212,0.12); border-color: rgba(94,234,212,0.4); color: var(--cyan);">🔄 Refresh leaderboard</button>
+    </div>
+</div>
+
+<!-- Stats & Achievements Modal -->
+<div id="statsModal" class="modal">
+    <div class="modal-content">
+        <button class="modal-close-x" data-close="statsModal">✕</button>
+        <h2>📊 Stats & Achievements</h2>
+        <div class="modal-tabs">
+            <button class="tab-btn active" data-tab="stats">📊 Stats</button>
+            <button class="tab-btn" data-tab="achv">🏅 Achievements</button>
+        </div>
+        <div class="tab-content" id="tabStats">
+            <ul class="stats-list" id="statsList"></ul>
+        </div>
+        <div class="tab-content hide-overlay" id="tabAchv">
+            <ul class="achv-list" id="achvList"></ul>
+        </div>
+        <button class="reset-btn" id="resetStatsBtn">🗑️ Reset stats, best score, leaderboard & achievements (local)</button>
+    </div>
+</div>
+
+<script>
+(function(){
+    // ================= VERSIONE =================
+    const APP_VERSION = '2.6.0';
+    const CHANGELOG = [
+        { v: '2.6.0', notes: [
+            'The whole app is now in English — every screen, menu, and message',
+            'Donation link updated to point to sputlab.com/donazioni and the "(PayPal)" label was dropped from the support menu item',
+            'Fixed a bug reported by Giangio: after using the orange Precision crystal, a "forgiven" Perfect hit still shrank the block to the actual overlap width — after 3 hits in a row the platform got silently narrower while speed kept ramping up as normal, which felt like the block had "gone haywire". A Perfect hit (forgiven or not) now always keeps the block at full width, perfectly aligned',
+            'Thanks again to <b>Giangio</b> for spotting this one! 🙌'
+        ] },
+        { v: '2.5.0', notes: [
+            'The Slowmo crystal now slows down the next 3 blocks, not just 1',
+            'New 🎯 orange "Precision" crystal: for the next 3 blocks, a gap of up to 10% still counts as Perfect',
+            'New 💥 red "Double Points" crystal: the next 3 blocks are worth double the points',
+            'A Perfect hit is now worth 40 points (up from 20)',
+            'The nickname entered on the leaderboard is now remembered and pre-filled (always editable) in future games',
+            'Added a splash screen with the game rules on startup, with a "Don\'t show again" option; it reappears automatically after a data reset',
+            'A big thank-you to <b>Giangio</b> for the great suggestions behind these additions! 🙌'
+        ] },
+        { v: '2.4.0', notes: ['New Global Leaderboard shared across every player (requires the PHP + MySQL backend included in the /api folder)', 'Burger menu: new "Global Leaderboard" button to browse every score, with no limits', 'End-of-run screen: Local/Global switch to compare both lists right away', 'At the end of every run, an estimated (then confirmed) global rank is shown together with your score', 'Tied scores share the same rank, both locally and globally', 'The reset button only affects local data: the global leaderboard is permanent and never cleared by the game'] },
+        { v: '2.3.0', notes: ['The burger menu now has three separate entries: Guide, Stats & Achievements, and Changelog, each with its own modal', 'Modals now close with a small circular (✕) button in the top-right corner instead of a "Close" button at the bottom', 'Renamed the "Statistiche" tab → Stats and "Achievement" tab → Achievements', 'Added a button to reset stats, best score, leaderboard, and achievements (with a confirmation prompt)', 'Fix: the name field on the leaderboard no longer overflows the screen on mobile', 'The PLAY AGAIN button on the end-of-run screen is now bigger and centered'] },
+        { v: '2.2.0', notes: ['Compact UI: score, blocks stacked, and best score now sit on a single row, leaving more room for the game on mobile (e.g. iPhone 12 mini)', 'Removed the subtitle, version tag, and instructions text from the game screen to maximize the canvas area', 'Rewritten guide covering the controls (tap / click / space) and a new dedicated Changelog tab', 'Added new stats and new achievements to unlock'] },
+        { v: '2.1.0', notes: ['Fix: the camera now always keeps rising with the tower, with no height limit (it used to freeze around the 20th-22nd block)', 'Added the version/changelog panel to the Guide'] },
+        { v: '2.0.0', notes: ['Visual overhaul: dynamic background with stars, clouds and a skyline, blocks with a 3D gradient', 'Procedural audio (Web Audio API): sounds for stacking, perfect hits, combos, crystals, and milestones', 'Achievement system and persistent stats', 'Responsive layout: the game now adapts to any screen', 'Fix: the bonus crystal and particle effects were not following the camera scroll'] },
+    ];
+
+    // ================= CANVAS =================
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
+    const CW = 480, CH = 700;
+    const DPR = Math.min(window.devicePixelRatio || 1, 2.5);
+    canvas.width = CW * DPR;
+    canvas.height = CH * DPR;
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+
+    function fitStage() {
+        const brand = document.querySelector('.brand');
+        const container = document.querySelector('.game-container');
+        const statBar = document.querySelector('.stat-bar');
+        const cs = container ? getComputedStyle(container) : null;
+        const padV = cs ? (parseFloat(cs.paddingTop) || 0) + (parseFloat(cs.paddingBottom) || 0) : 24;
+        const chromeH = (brand ? brand.offsetHeight : 20) + (statBar ? statBar.offsetHeight : 40) + padV + 20;
+        const availH = window.innerHeight - chromeH - 8;
+        const availW = window.innerWidth - 16;
+        let scale = Math.min(availW / CW, availH / CH);
+        scale = Math.max(0.28, Math.min(scale, 1.15));
+        canvas.style.width = Math.round(CW * scale) + 'px';
+        canvas.style.height = Math.round(CH * scale) + 'px';
+    }
+    window.addEventListener('resize', fitStage);
+    window.addEventListener('orientationchange', () => setTimeout(fitStage, 100));
+
+    // ================= COSTANTI =================
+    const BLOCK_H = 32;
+    const BASE_W = 140;
+    const BASE_X = (CW - BASE_W) / 2;
+    const BASE_Y = CH - BLOCK_H - 8;
+    const MIN_W = 6;
+    const SPEED_INC = 0.27;
+    const MAX_SPEED = 12.8;
+    const BASE_SPEED = 2.5;
+
+    // ================= STATO GIOCO =================
+    let gameRunning = true;
+    let currentScore = 0;
+    let displayedScore = 0;
+    let bestScore = 0;
+    let isNewRecord = false;
+    let processingTap = false;
+    let tower = [];
+    let currentTopBlock = null;
+    let movingBlock = { x: BASE_X, width: BASE_W, direction: 1, speed: BASE_SPEED };
+    let cameraYOffset = 0;
+    let frameCount = 0;
+
+    // Feature
+    let particles = [];
+    let floatingTexts = [];
+    let trailPositions = [];
+    let colorHue = 210;
+    let shakeAmount = 0, shakeFrames = 0;
+    let perfectStreak = 0;
+    let sessionBestStreak = 0;
+    let multiplierActive = false;
+    let multiplierStacksLeft = 0;
+    let currentMultiplier = 1;
+    let goldenBonusActive = false;
+    let slowmoBlocksLeft = 0;
+    let precisionBlocksLeft = 0;
+    let doubleBlocksLeft = 0;
+    let crystal = { active: false, x: 0, y: 0, type: 'slowmo' };
+    let perfectZoneActive = false;
+    let perfectZoneCenterX = 0;
+    let salvationUsed = false;
+    let perfectFlash = { active: false, timer: 0 };
+
+    // Highscore
+    let highScores = [];
+    let pendingScore = 0;
+    let pendingBlocks = 0;
+    let scoreSaved = false;
+
+    // Classifica globale (richiede backend PHP + MySQL, vedi cartella /api)
+    // <-- CONFIGURA QUESTO ENDPOINT dopo aver caricato i file della cartella /api sul tuo hosting
+    const API_BASE_URL = 'api';
+    let leaderboardMode = 'local'; // 'local' | 'global'
+    let globalScores = null;       // cache: [{nickname, score, blocks, rank}]
+    let globalLoading = false;
+    let globalError = null;
+
+    // Stats & achievement persistenti
+    let stats = {
+        gamesPlayed: 0, totalBlocks: 0, bestStreak: 0, crystals: 0, salvations: 0,
+        totalScore: 0, bestTower: 0, totalPerfects: 0, milestones: 0, totalPlaytimeMs: 0
+    };
+    let unlockedAchievements = new Set();
+    let achievementQueue = [];
+    let toast = null;
+    let gameStartTime = 0;
+
+    const ACHIEVEMENTS = [
+        { id: 'first',       icon: '🧱', name: 'First Step',            desc: 'Stack your first block',                     check: (s) => s.totalBlocks >= 1 },
+        { id: 'ten',         icon: '🏗️', name: 'Tower of 10',            desc: 'Reach 10 blocks in a single run',            check: (s, g) => g.towerLen >= 10 },
+        { id: 'fifty',       icon: '🏙️', name: 'Tower of 50',            desc: 'Reach 50 blocks in a single run',            check: (s, g) => g.towerLen >= 50 },
+        { id: 'hundred',     icon: '🌆', name: 'Skyscraper',             desc: 'Reach 100 blocks in a single run',           check: (s, g) => g.towerLen >= 100 },
+        { id: 'twohundred',  icon: '🚀', name: 'Above the Clouds',       desc: 'Reach 200 blocks in a single run',           check: (s, g) => g.towerLen >= 200 },
+        { id: 'streak5',     icon: '🎯', name: 'Surgical Precision',     desc: '5 Perfect blocks in a row',                  check: (s, g) => g.streak >= 5 },
+        { id: 'streak10',    icon: '🥇', name: 'Metronome',              desc: '10 Perfect blocks in a row',                 check: (s, g) => g.streak >= 10 },
+        { id: 'crystals10',  icon: '💎', name: 'Crystal Hunter',         desc: 'Collect 10 crystals in total',               check: (s) => s.crystals >= 10 },
+        { id: 'crystals50',  icon: '👑', name: 'Gemologist',             desc: 'Collect 50 crystals in total',               check: (s) => s.crystals >= 50 },
+        { id: 'score1000',   icon: '🏆', name: 'One Thousand Points',    desc: 'Score 1000 points in a single run',          check: (s, g) => g.score >= 1000 },
+        { id: 'score5000',   icon: '💰', name: 'Five Thousand',          desc: 'Score 5000 points in a single run',          check: (s, g) => g.score >= 5000 },
+        { id: 'survivor',    icon: '🛟', name: 'Survivor',               desc: 'Use the safety net 5 times in total',        check: (s) => s.salvations >= 5 },
+        { id: 'marathon',    icon: '🏃', name: 'Marathoner',             desc: 'Stack 1000 blocks in total',                 check: (s) => s.totalBlocks >= 1000 },
+        { id: 'dedication',  icon: '❤️', name: 'Dedication',             desc: 'Play 50 games',                              check: (s) => s.gamesPlayed >= 50 },
+        { id: 'perfectionist',icon:'✨', name: 'Perfectionist',          desc: 'Collect 100 Perfect blocks in total',        check: (s) => s.totalPerfects >= 100 },
+    ];
+
+    // Sfondo: stelle, nuvole, skyline
+    const stars = [];
+    for (let i = 0; i < 70; i++) {
+        stars.push({ x: Math.random() * CW, y: Math.random() * CH * 0.78, r: Math.random() * 1.5 + 0.4, phase: Math.random() * Math.PI * 2, speed: 0.02 + Math.random() * 0.04 });
+    }
+    const clouds = [];
+    for (let i = 0; i < 5; i++) {
+        clouds.push({ x: Math.random() * CW, y: 50 + Math.random() * 170, w: 70 + Math.random() * 100, h: 16 + Math.random() * 14, spd: 0.12 + Math.random() * 0.18 });
+    }
+    const skyline = [];
+    (function buildSkyline() {
+        let x = 0;
+        while (x < CW) {
+            const w = 26 + Math.random() * 46;
+            const h = 36 + Math.random() * 130;
+            skyline.push({ x, w, h });
+            x += w + 2;
+        }
+    })();
+
+    // DOM elements
+    const scoreElem = document.getElementById('scoreDisplay');
+    const scoreChip = document.getElementById('scoreChip');
+    const blocksElem = document.getElementById('blocksDisplay');
+    const bestElem = document.getElementById('bestDisplay');
+    const multiplierBadge = document.getElementById('multiplierBadge');
+    const highscoreOverlay = document.getElementById('highscoreOverlay');
+    const overlayList = document.getElementById('overlayHighscoreList');
+    const overlayNameEntry = document.getElementById('overlayNameEntry');
+    const overlayPlayerName = document.getElementById('overlayPlayerName');
+    const overlaySaveBtn = document.getElementById('overlaySaveBtn');
+    const muteBtn = document.getElementById('muteBtn');
+
+    // ================= AUDIO (Web Audio API, procedurale, nessun asset esterno) =================
+    let audioCtx = null;
+    let muted = localStorage.getItem('stacksnap_muted') === '1';
+
+    function ensureAudio() {
+        if (!audioCtx) {
+            try { audioCtx = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { audioCtx = null; }
+        } else if (audioCtx.state === 'suspended') {
+            audioCtx.resume();
+        }
+    }
+    function tone(freq, dur, type, vol, delay, freqEnd) {
+        if (muted || !audioCtx) return;
+        const t0 = audioCtx.currentTime + (delay || 0);
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = type || 'sine';
+        osc.frequency.setValueAtTime(freq, t0);
+        if (freqEnd) osc.frequency.exponentialRampToValueAtTime(Math.max(20, freqEnd), t0 + dur);
+        gain.gain.setValueAtTime(0.0001, t0);
+        gain.gain.linearRampToValueAtTime(vol || 0.15, t0 + 0.008);
+        gain.gain.exponentialRampToValueAtTime(0.0001, t0 + dur);
+        osc.connect(gain).connect(audioCtx.destination);
+        osc.start(t0);
+        osc.stop(t0 + dur + 0.03);
+    }
+    const sfxStack = (h) => tone(220 + Math.min(h, 40) * 9, 0.09, 'square', 0.10);
+    const sfxPerfect = () => { tone(880, 0.09, 'triangle', 0.14); tone(1320, 0.12, 'triangle', 0.14, 0.06); };
+    const sfxCombo = () => tone(440, 0.2, 'sawtooth', 0.11, 0, 900);
+    const sfxCrystal = () => { tone(1046, 0.06, 'sine', 0.13); tone(1568, 0.08, 'sine', 0.13, 0.05); tone(2093, 0.1, 'sine', 0.11, 0.1); };
+    const sfxMilestone = () => [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.16, 'triangle', 0.12, i * 0.07));
+    const sfxGameOver = () => tone(300, 0.4, 'sawtooth', 0.14, 0, 80);
+    const sfxAchievement = () => { tone(660, 0.1, 'square', 0.09); tone(990, 0.14, 'square', 0.09, 0.09); };
+
+    function updateMuteBtn() { muteBtn.textContent = muted ? '🔇 Audio: OFF' : '🔊 Audio: ON'; }
+    muteBtn.addEventListener('click', () => {
+        muted = !muted;
+        localStorage.setItem('stacksnap_muted', muted ? '1' : '0');
+        updateMuteBtn();
+    });
+    updateMuteBtn();
+
+    function firstGesture() { ensureAudio(); }
+    window.addEventListener('pointerdown', firstGesture, { once: true });
+    window.addEventListener('keydown', firstGesture, { once: true });
+
+    // ================= PERSISTENZA =================
+    function loadHighScores() {
+        const stored = localStorage.getItem('stacksnap_highscores');
+        if (stored) {
+            try { highScores = JSON.parse(stored); } catch (e) { highScores = []; }
+        }
+        if (!Array.isArray(highScores)) highScores = [];
+        highScores.sort((a, b) => b.score - a.score);
+        if (highScores.length > 10) highScores = highScores.slice(0, 10);
+        renderOverlayHighscores();
+    }
+    function saveHighScores() { localStorage.setItem('stacksnap_highscores', JSON.stringify(highScores.slice(0, 10))); }
+
+    function escapeHtml(str) {
+        return String(str).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+    }
+    function renderOverlayHighscores() {
+        overlayList.innerHTML = '';
+        if (highScores.length === 0) {
+            overlayList.innerHTML = '<li>📭 No scores yet</li>';
+            return;
+        }
+        for (let i = 0; i < highScores.length; i++) {
+            const hs = highScores[i];
+            const li = document.createElement('li');
+            li.innerHTML = `<span>${i + 1}. ${escapeHtml(hs.name)}</span><span>${hs.score}</span>`;
+            overlayList.appendChild(li);
+        }
+    }
+    function addHighScore(name, score) {
+        highScores.push({ name: name.substring(0, 16), score: score });
+        highScores.sort((a, b) => b.score - a.score);
+        if (highScores.length > 10) highScores.pop();
+        saveHighScores();
+        renderOverlayHighscores();
+    }
+
+    // ================= CLASSIFICA GLOBALE (backend PHP + MySQL, vedi /api) =================
+    async function fetchGlobalLeaderboard(force) {
+        if (globalScores && !force) return globalScores;
+        if (globalLoading) return globalScores;
+        globalLoading = true;
+        globalError = null;
+        try {
+            const res = await fetch(`${API_BASE_URL}/get_leaderboard.php`);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            if (!Array.isArray(data)) throw new Error('Risposta non valida');
+            // Il server restituisce l'elenco già ordinato e con 'rank' calcolato
+            // (stesso punteggio = stessa posizione, nessun salto tra le posizioni).
+            globalScores = data;
+        } catch (e) {
+            globalError = 'Global leaderboard unavailable right now.';
+            globalScores = null;
+        } finally {
+            globalLoading = false;
+        }
+        return globalScores;
+    }
+
+    async function submitGlobalScore(nickname, score, blocks) {
+        try {
+            const res = await fetch(`${API_BASE_URL}/submit_score.php`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ nickname, score, blocks })
+            });
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            const data = await res.json();
+            await fetchGlobalLeaderboard(true);
+            return data;
+        } catch (e) {
+            return null;
+        }
+    }
+
+    function globalRankPreview(score) {
+        if (!globalScores) return null;
+        const distinctHigher = new Set(globalScores.filter(s => s.score > score).map(s => s.score)).size;
+        return distinctHigher + 1;
+    }
+
+    function renderGlobalListInto(el) {
+        if (globalLoading) { el.innerHTML = '<li>⏳ Loading...</li>'; return; }
+        if (globalError || !globalScores) { el.innerHTML = `<li>⚠️ ${globalError || 'Leaderboard unavailable'}</li>`; return; }
+        if (globalScores.length === 0) { el.innerHTML = '<li>📭 No global scores yet</li>'; return; }
+        el.innerHTML = globalScores.map(item =>
+            `<li><span>#${item.rank} ${escapeHtml(item.nickname)}</span><span>${item.score}</span></li>`
+        ).join('');
+    }
+
+    function renderOverlayList() {
+        if (leaderboardMode === 'local') renderOverlayHighscores();
+        else renderGlobalListInto(overlayList);
+    }
+
+    function updateScoreRecapPreview() {
+        const recap = document.getElementById('scoreRecap');
+        if (!recap) return;
+        const preview = globalRankPreview(pendingScore);
+        const extra = preview !== null ? ` · Estimated global rank: <b>#${preview}</b>` : ' · <span style="opacity:0.65;">loading global leaderboard…</span>';
+        recap.innerHTML = `Score: <b>${pendingScore}</b>${extra}`;
+    }
+
+    function loadStats() {
+        try {
+            const s = JSON.parse(localStorage.getItem('stacksnap_stats'));
+            if (s) stats = Object.assign(stats, s);
+        } catch (e) {}
+        try {
+            const a = JSON.parse(localStorage.getItem('stacksnap_achv'));
+            if (Array.isArray(a)) unlockedAchievements = new Set(a);
+        } catch (e) {}
+    }
+    function saveStats() { localStorage.setItem('stacksnap_stats', JSON.stringify(stats)); }
+    function saveAchievements() { localStorage.setItem('stacksnap_achv', JSON.stringify([...unlockedAchievements])); }
+
+    function checkAchievements(g) {
+        for (const a of ACHIEVEMENTS) {
+            if (!unlockedAchievements.has(a.id) && a.check(stats, g)) unlockAchievement(a);
+        }
+    }
+    function unlockAchievement(a) {
+        if (unlockedAchievements.has(a.id)) return;
+        unlockedAchievements.add(a.id);
+        saveAchievements();
+        achievementQueue.push({ icon: a.icon, name: a.name, timer: 0 });
+        sfxAchievement();
+        vibrate(25);
+    }
+
+    function loadBest() {
+        const stored = localStorage.getItem('stacksnap_best');
+        bestScore = (stored && !isNaN(parseInt(stored))) ? parseInt(stored) : 0;
+        bestElem.innerText = bestScore;
+    }
+    function saveBest() {
+        if (currentScore > bestScore) {
+            bestScore = currentScore;
+            localStorage.setItem('stacksnap_best', bestScore);
+            bestElem.innerText = bestScore;
+        }
+    }
+
+    // ================= UI =================
+    function bumpScoreCard() {
+        scoreChip.classList.add('bump');
+        setTimeout(() => scoreChip.classList.remove('bump'), 130);
+    }
+    function updateUI() {
+        if (multiplierActive && currentMultiplier > 1) {
+            multiplierBadge.style.display = 'flex';
+            multiplierBadge.innerText = `x${currentMultiplier}`;
+        } else {
+            multiplierBadge.style.display = 'none';
+        }
+    }
+
+    // ================= CAMERA =================
+    function updateCamera() {
+        // La camera insegue sempre il blocco in cima alla torre, senza limiti di altezza:
+        // prima la torre cresceva ma oltre ~20 blocchi l'offset veniva bloccato (clamp a 0/maxCam)
+        // e la visuale smetteva di salire, rendendo impossibile continuare a giocare.
+        if (!currentTopBlock) return;
+        const targetY = currentTopBlock.y - 200;
+        const delta = targetY - cameraYOffset;
+        cameraYOffset += delta * 0.12;
+    }
+    function startShake(intensity, frames) { shakeAmount = intensity; shakeFrames = frames; }
+
+    // ================= PARTICELLE E TESTI (coordinate MONDO, convertite in schermo al disegno) =================
+    function addParticles(x, y, isPerfect, isGolden, isPerfectZone) {
+        const count = isPerfect ? 14 : 7;
+        const baseColor = isPerfectZone ? `hsl(80,100%,65%)` : (isGolden ? `hsl(50,100%,60%)` : `hsl(${colorHue + 30},85%,65%)`);
+        for (let i = 0; i < count; i++) {
+            particles.push({
+                x: x + Math.random() * movingBlock.width, y: y,
+                vx: (Math.random() - 0.5) * 3, vy: -Math.random() * 4 - 1.5,
+                life: 1.0, color: isPerfect ? `hsl(${45 + Math.random() * 30},100%,65%)` : baseColor,
+                size: 3, rot: 0, rotSpeed: 0, grav: 0.2
+            });
+        }
+    }
+    const CONFETTI_COLORS = ['#ffb454', '#5eead4', '#9dff6b', '#ff9ecb', '#ffe27a', '#8ecbff'];
+    function addConfetti(x, y, count) {
+        for (let i = 0; i < count; i++) {
+            particles.push({
+                x: x + (Math.random() - 0.5) * 70, y: y - 10,
+                vx: (Math.random() - 0.5) * 5, vy: -Math.random() * 6 - 2,
+                life: 1.3, color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+                size: 4 + Math.random() * 3, rot: Math.random() * Math.PI, rotSpeed: (Math.random() - 0.5) * 0.3, grav: 0.15
+            });
+        }
+    }
+    function addFloatingText(text, x, y, color) {
+        if (floatingTexts.length > 12) floatingTexts.shift();
+        const offsetX = (Math.random() - 0.5) * 20;
+        const offsetY = (Math.random() - 0.5) * 12 - 6;
+        floatingTexts.push({ text, baseX: x + offsetX, baseY: y + offsetY - 12, life: 1.6, vy: -0.7, color: color || '#ffdd99' });
+    }
+    function updateParticlesAndTexts() {
+        for (let i = 0; i < particles.length; i++) {
+            const p = particles[i];
+            p.x += p.vx; p.y += p.vy; p.vy += (p.grav || 0.2);
+            p.rot = (p.rot || 0) + (p.rotSpeed || 0);
+            p.life -= 0.018;
+            if (p.life <= 0 || (p.y - cameraYOffset) > CH + 50) { particles.splice(i, 1); i--; }
+        }
+        for (let i = 0; i < floatingTexts.length; i++) {
+            floatingTexts[i].baseY += floatingTexts[i].vy;
+            floatingTexts[i].life -= 0.007;
+            if (floatingTexts[i].life <= 0) { floatingTexts.splice(i, 1); i--; }
+        }
+        if (!toast && achievementQueue.length) { toast = achievementQueue.shift(); toast.timer = 0; }
+        if (toast) { toast.timer++; if (toast.timer > 170) toast = null; }
+    }
+
+    // ================= POWER-UP CRISTALLO (posizione relativa alla torre; 3 tipi casuali) =================
+    const CRYSTAL_TYPES = {
+        slowmo:    { color: '#8effff', label: '🐢 SLOWMO ×3 blocks' },
+        precision: { color: '#ffb347', label: '🎯 PRECISION ×3 blocks' },
+        double:    { color: '#ff6b6b', label: '💥 DOUBLE POINTS ×3 blocks' },
+    };
+    function trySpawnCrystal() {
+        if (crystal.active || !currentTopBlock) return;
+        if (tower.length >= 6 && tower.length % 7 === 0 && Math.random() < 0.65) {
+            crystal.active = true;
+            const margin = 24;
+            crystal.x = margin + Math.random() * (CW - margin * 2 - 16);
+            crystal.y = currentTopBlock.y - BLOCK_H - 46; // coordinate mondo, coerenti con la torre
+            const types = Object.keys(CRYSTAL_TYPES);
+            crystal.type = types[Math.floor(Math.random() * types.length)];
+        }
+    }
+    function checkCrystalCollision() {
+        if (!crystal.active || !gameRunning || !currentTopBlock) return;
+        const mbX = movingBlock.x;
+        const mbY = currentTopBlock.y - BLOCK_H;
+        const w = movingBlock.width;
+        if (mbX < crystal.x + 16 && mbX + w > crystal.x && mbY < crystal.y + 16 && mbY + BLOCK_H > crystal.y) {
+            crystal.active = false;
+            stats.crystals++;
+            const type = crystal.type;
+            if (type === 'slowmo') {
+                movingBlock.speed = Math.max(1.6, movingBlock.speed * 0.58);
+                slowmoBlocksLeft = 3;
+            } else if (type === 'precision') {
+                precisionBlocksLeft = 3;
+            } else if (type === 'double') {
+                doubleBlocksLeft = 3;
+            }
+            const info = CRYSTAL_TYPES[type];
+            addFloatingText(info.label, movingBlock.x + w / 2, mbY - 10, info.color);
+            sfxCrystal();
+            vibrate(15);
+            checkAchievements({ towerLen: tower.length, streak: perfectStreak, score: currentScore });
+        }
+    }
+
+    // ================= RESET / FINE PARTITA =================
+    function initGame() {
+        gameRunning = true;
+        processingTap = false;
+        currentScore = 0;
+        displayedScore = 0;
+        currentMultiplier = 1;
+        multiplierActive = false;
+        multiplierStacksLeft = 0;
+        perfectStreak = 0;
+        sessionBestStreak = 0;
+        goldenBonusActive = false;
+        slowmoBlocksLeft = 0;
+        precisionBlocksLeft = 0;
+        doubleBlocksLeft = 0;
+        salvationUsed = false;
+        perfectZoneActive = false;
+        crystal.active = false;
+        particles = [];
+        floatingTexts = [];
+        trailPositions = [];
+        colorHue = 210;
+        perfectFlash.active = false;
+        scoreSaved = false;
+        pendingScore = 0;
+        pendingBlocks = 0;
+        isNewRecord = false;
+        updateUI();
+
+        tower = [];
+        const baseBlock = { x: BASE_X, y: BASE_Y, width: BASE_W };
+        tower.push(baseBlock);
+        currentTopBlock = baseBlock;
+
+        movingBlock.width = BASE_W;
+        movingBlock.x = BASE_X;
+        movingBlock.direction = 1;
+        movingBlock.speed = BASE_SPEED;
+        cameraYOffset = 0;
+        blocksElem.innerText = '0';
+        gameStartTime = Date.now();
+
+        hideHighscoreOverlay();
+    }
+
+    function endGame() {
+        if (!gameRunning) return;
+        gameRunning = false;
+        isNewRecord = currentScore > bestScore && currentScore > 0;
+        saveBest();
+        stats.gamesPlayed++;
+        stats.bestStreak = Math.max(stats.bestStreak, sessionBestStreak);
+        stats.totalScore += currentScore;
+        stats.bestTower = Math.max(stats.bestTower, tower.length - 1);
+        stats.totalPlaytimeMs += Math.max(0, Date.now() - gameStartTime);
+        saveStats();
+        sfxGameOver();
+        vibrate(60);
+        pendingScore = currentScore;
+        pendingBlocks = Math.max(0, tower.length - 1);
+        scoreSaved = false;
+        leaderboardMode = 'local';
+        showHighscoreOverlay();
+    }
+
+    // ================= STACK PRINCIPALE =================
+    function performStack() {
+        if (!gameRunning || processingTap) return false;
+        processingTap = true;
+
+        const under = currentTopBlock;
+        const mL = movingBlock.x, mR = mL + movingBlock.width;
+        const uL = under.x, uR = under.x + under.width;
+        const overlapL = Math.max(mL, uL);
+        const overlapR = Math.min(mR, uR);
+        let overlapW = overlapR - overlapL;
+
+        if (overlapW <= 0.8 || overlapW < MIN_W) {
+            endGame();
+            processingTap = false;
+            return false;
+        }
+
+        let isPerfect = (overlapW >= under.width - 0.9);
+        let precisionForgiven = false;
+        if (!isPerfect && precisionBlocksLeft > 0 && overlapW >= under.width * 0.9) {
+            // Cristallo arancione: scarto entro il 10% del blocco precedente -> conta comunque come Perfetto
+            isPerfect = true;
+            precisionForgiven = true;
+        }
+        let isPerfectZoneHit = false;
+        if (perfectZoneActive && under.width > 6) {
+            const zoneLeft = perfectZoneCenterX - 3;
+            const zoneRight = perfectZoneCenterX + 3;
+            if (overlapL <= zoneRight && overlapR >= zoneLeft) isPerfectZoneHit = true;
+            perfectZoneActive = false;
+        }
+
+        let points = 10;
+        if (isPerfect) points += 30; // Perfetto: 10 base + 30 bonus = 40 punti totali
+        if (goldenBonusActive) points += 50;
+        if (isPerfectZoneHit) points *= 3;
+        if (doubleBlocksLeft > 0) points *= 2; // Cristallo rosso: punti doppi
+        points = Math.floor(points * currentMultiplier);
+
+        currentScore += points;
+        bumpScoreCard();
+        updateUI();
+
+        if (isPerfect) {
+            perfectStreak++;
+            sessionBestStreak = Math.max(sessionBestStreak, perfectStreak);
+            stats.totalPerfects++;
+            sfxPerfect();
+            if (perfectStreak >= 3 && !multiplierActive) {
+                multiplierActive = true;
+                multiplierStacksLeft = 3;
+                currentMultiplier = 2;
+                updateUI();
+                addFloatingText("STREAK x2!", CW / 2, currentTopBlock.y - 25, "#ffaa66");
+                sfxCombo();
+                vibrate(30);
+            }
+        } else {
+            perfectStreak = 0;
+        }
+        if (multiplierActive) {
+            multiplierStacksLeft--;
+            if (multiplierStacksLeft <= 0) {
+                multiplierActive = false;
+                currentMultiplier = 1;
+                updateUI();
+            }
+        }
+
+        let newX = overlapL;
+        let newWidth = overlapW;
+        if (isPerfect) {
+            // Un Perfetto (anche quello "assistito" dal cristallo Precisione) mantiene sempre
+            // la piena larghezza, allineato esattamente al blocco sottostante. Prima, un colpo
+            // perdonato dal cristallo arancione restringeva comunque il blocco alla sovrapposizione
+            // reale pur segnandolo come "Perfetto!": dopo 3 colpi di fila il blocco si assottigliava
+            // silenziosamente (fino al ~73% della larghezza) mentre la velocità continuava ad
+            // aumentare normalmente, dando la sensazione di un blocco improvvisamente "impazzito".
+            newX = under.x;
+            newWidth = under.width;
+        }
+        if (!salvationUsed && newWidth > MIN_W && newWidth < MIN_W * 1.8) {
+            salvationUsed = true;
+            stats.salvations++;
+            newWidth = Math.max(38, BASE_W / 2.2);
+            addFloatingText("RESCUED!", movingBlock.x + movingBlock.width / 2, currentTopBlock.y - BLOCK_H - 10, "#aaffdd");
+            startShake(2, 4);
+        }
+
+        const newY = under.y - BLOCK_H;
+        const newBlock = { x: newX, y: newY, width: newWidth };
+        tower.push(newBlock);
+        currentTopBlock = newBlock;
+        stats.totalBlocks++;
+        blocksElem.innerText = tower.length - 1;
+
+        if (newBlock.width < MIN_W) {
+            endGame();
+            processingTap = false;
+            return false;
+        }
+
+        addParticles(newX, newY, isPerfect, goldenBonusActive, isPerfectZoneHit);
+        addFloatingText(`+${points}`, newX + newWidth / 2, newY - 8, isPerfect ? "#ffcc55" : "#cceeff");
+        if (precisionForgiven) addFloatingText("🎯 ASSISTED!", newX + newWidth / 2, newY - 40, "#ffb347");
+        if (isPerfectZoneHit) addFloatingText("PERFECT ZONE!", newX + newWidth / 2, newY - 28, "#aaff77");
+        if (goldenBonusActive) addFloatingText("⭐ GOLDEN TOWER", newX + newWidth / 2, newY - 22, "#ffcc44");
+        if (doubleBlocksLeft > 0) addFloatingText("💥 x2", newX + newWidth / 2, newY - 34, "#ff9c9c");
+        if (isPerfect) {
+            perfectFlash.active = true;
+            perfectFlash.timer = 14;
+            vibrate(12);
+        } else {
+            sfxStack(tower.length);
+            vibrate(8);
+        }
+
+        goldenBonusActive = (tower.length % 5 === 0);
+        colorHue = (210 + Math.floor(tower.length / 5) * 18) % 360;
+
+        if (tower.length % 10 === 0 && tower.length > 0) {
+            perfectZoneActive = true;
+            perfectZoneCenterX = currentTopBlock.x + currentTopBlock.width / 2;
+        }
+
+        if (tower.length % 25 === 0) {
+            stats.milestones++;
+            addConfetti(newX + newWidth / 2, newY, 26);
+            addFloatingText(`🎉 ${tower.length} BLOCKS!`, CW / 2, newY - 46, '#ffe27a');
+            startShake(5, 10);
+            sfxMilestone();
+            vibrate(40);
+        }
+
+        if (slowmoBlocksLeft > 0) {
+            slowmoBlocksLeft--; // frena l'accelerazione per i blocchi già rallentati dal cristallo blu
+        } else {
+            movingBlock.speed = Math.min(MAX_SPEED, movingBlock.speed + SPEED_INC);
+        }
+        if (precisionBlocksLeft > 0) precisionBlocksLeft--;
+        if (doubleBlocksLeft > 0) doubleBlocksLeft--;
+
+        movingBlock.width = newBlock.width;
+        movingBlock.x = newBlock.x;
+        movingBlock.direction = 1;
+
+        trySpawnCrystal();
+        trailPositions.unshift({ x: movingBlock.x, age: 0 });
+        if (trailPositions.length > 5) trailPositions.pop();
+
+        checkAchievements({ towerLen: tower.length, streak: perfectStreak, score: currentScore });
+
+        processingTap = false;
+        return true;
+    }
+
+    function updateMoving() {
+        if (!gameRunning) return;
+        const spd = movingBlock.speed;
+        movingBlock.x += spd * movingBlock.direction;
+        const w = movingBlock.width;
+        if (movingBlock.x <= 0) { movingBlock.x = 0; movingBlock.direction = 1; }
+        if (movingBlock.x + w >= CW) { movingBlock.x = CW - w; movingBlock.direction = -1; }
+        if (Math.random() < 0.4) {
+            trailPositions.unshift({ x: movingBlock.x, age: 0 });
+            if (trailPositions.length > 5) trailPositions.pop();
+        }
+        for (const t of trailPositions) t.age = (t.age || 0) + 1;
+    }
+
+    // ================= SFONDO =================
+    function updateBackground() {
+        for (const st of stars) st.phase += st.speed;
+        for (const c of clouds) {
+            c.x += c.spd;
+            if (c.x > CW + 80) c.x = -80;
+        }
+    }
+    function drawBackground() {
+        const nightFactor = Math.min(1, tower.length / 120);
+        const grad = ctx.createLinearGradient(0, 0, 0, CH);
+        grad.addColorStop(0, `hsl(${colorHue}, 55%, ${Math.max(4, 13 - nightFactor * 8)}%)`);
+        grad.addColorStop(1, `hsl(${colorHue}, 45%, ${Math.max(3, 7 - nightFactor * 3)}%)`);
+        ctx.fillStyle = grad;
+        ctx.fillRect(0, 0, CW, CH);
+
+        ctx.save();
+        for (const st of stars) {
+            const tw = 0.35 + 0.65 * Math.abs(Math.sin(st.phase));
+            ctx.globalAlpha = tw * (0.25 + nightFactor * 0.75);
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+
+        ctx.save();
+        ctx.globalAlpha = 0.09 + (1 - nightFactor) * 0.09;
+        ctx.fillStyle = '#ffffff';
+        for (const c of clouds) {
+            ctx.beginPath();
+            ctx.ellipse(c.x, c.y, c.w / 2, c.h / 2, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+        ctx.restore();
+
+        ctx.save();
+        ctx.globalAlpha = 0.55;
+        ctx.fillStyle = `hsl(${colorHue}, 40%, ${Math.max(2, 6 - nightFactor * 3)}%)`;
+        const lift = Math.min(Math.abs(cameraYOffset) * 0.03, 40);
+        for (const b of skyline) ctx.fillRect(b.x, CH - b.h + lift, b.w, b.h + 60);
+        ctx.restore();
+    }
+
+    // ================= HELPER DISEGNO =================
+    function roundRect(x, y, w, h, r) {
+        ctx.beginPath();
+        ctx.moveTo(x + r, y);
+        ctx.arcTo(x + w, y, x + w, y + h, r);
+        ctx.arcTo(x + w, y + h, x, y + h, r);
+        ctx.arcTo(x, y + h, x, y, r);
+        ctx.arcTo(x, y, x + w, y, r);
+        ctx.closePath();
+    }
+
+    function drawBlock(b, sy, i, isTop) {
+        const w = b.width;
+        let lightness = 42 + (i % 8) * 2.5;
+        let sat = 58;
+        if (isTop) { lightness = 72; sat = 78; }
+        ctx.save();
+        ctx.shadowColor = 'rgba(0,0,0,0.45)';
+        ctx.shadowBlur = 7;
+        ctx.shadowOffsetY = 3;
+        const g = ctx.createLinearGradient(b.x, sy, b.x, sy + BLOCK_H);
+        g.addColorStop(0, `hsl(${colorHue}, ${sat + 10}%, ${Math.min(92, lightness + 16)}%)`);
+        g.addColorStop(0.55, `hsl(${colorHue}, ${sat}%, ${lightness}%)`);
+        g.addColorStop(1, `hsl(${colorHue}, ${Math.max(20, sat - 10)}%, ${Math.max(8, lightness - 18)}%)`);
+        ctx.fillStyle = g;
+        ctx.fillRect(b.x, sy, w, BLOCK_H);
+        ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
+        ctx.fillStyle = `hsla(${colorHue}, 90%, 92%, 0.35)`;
+        ctx.fillRect(b.x, sy, w, 3);
+        if (goldenBonusActive && isTop) {
+            ctx.strokeStyle = '#f7d44a';
+            ctx.lineWidth = 3;
+        } else {
+            ctx.strokeStyle = `hsla(${colorHue}, 70%, 80%, 0.55)`;
+            ctx.lineWidth = 1;
+        }
+        ctx.strokeRect(b.x + 0.5, sy + 0.5, w - 1, BLOCK_H - 1);
+        ctx.restore();
+    }
+
+    // ================= DISEGNO =================
+    function draw() {
+        drawBackground();
+
+        ctx.save();
+        if (shakeFrames > 0) {
+            ctx.translate((Math.random() - 0.5) * shakeAmount, (Math.random() - 0.5) * shakeAmount);
+            shakeFrames--;
+        }
+
+        for (let i = 0; i < tower.length; i++) {
+            const b = tower[i];
+            const sy = b.y - cameraYOffset;
+            if (sy + BLOCK_H < -20 || sy > CH + 20) continue;
+            drawBlock(b, sy, i, b === currentTopBlock);
+        }
+
+        for (let i = 0; i < trailPositions.length; i++) {
+            const t = trailPositions[i];
+            const alpha = 0.32 - i * 0.06;
+            if (alpha <= 0) continue;
+            ctx.fillStyle = `rgba(255, 220, 100, ${alpha})`;
+            const trailY = currentTopBlock ? currentTopBlock.y - cameraYOffset - BLOCK_H : 0;
+            ctx.fillRect(t.x, trailY, movingBlock.width, BLOCK_H);
+        }
+
+        if (gameRunning && currentTopBlock) {
+            const mbY = currentTopBlock.y - cameraYOffset - BLOCK_H;
+            if (mbY + BLOCK_H > 0 && mbY < CH) {
+                let glowColor = '#ffbb66', fillHue = colorHue + 15;
+                if (slowmoBlocksLeft > 0) { glowColor = '#44ddff'; fillHue = colorHue + 30; }
+                else if (doubleBlocksLeft > 0) { glowColor = '#ff6b6b'; fillHue = colorHue - 10; }
+                else if (precisionBlocksLeft > 0) { glowColor = '#ffb347'; fillHue = colorHue + 5; }
+                ctx.save();
+                ctx.shadowBlur = 14;
+                ctx.shadowColor = glowColor;
+                ctx.fillStyle = `hsl(${fillHue}, 90%, 65%)`;
+                ctx.fillRect(movingBlock.x, mbY, movingBlock.width, BLOCK_H);
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = 'rgba(255,251,208,0.85)';
+                ctx.fillRect(movingBlock.x + 2, mbY, movingBlock.width - 4, 5);
+                ctx.strokeStyle = '#ffffbb';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(movingBlock.x, mbY, movingBlock.width, BLOCK_H);
+                ctx.restore();
+            }
+        }
+
+        if (crystal.active && gameRunning) {
+            const csy = crystal.y - cameraYOffset + Math.sin(frameCount * 0.1) * 3;
+            if (csy > -30 && csy < CH + 30) {
+                const col = (CRYSTAL_TYPES[crystal.type] || CRYSTAL_TYPES.slowmo).color;
+                ctx.save();
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = col;
+                ctx.fillStyle = col;
+                ctx.beginPath();
+                ctx.moveTo(crystal.x + 8, csy);
+                ctx.lineTo(crystal.x + 16, csy + 10);
+                ctx.lineTo(crystal.x + 8, csy + 18);
+                ctx.lineTo(crystal.x, csy + 10);
+                ctx.fill();
+                ctx.shadowBlur = 0;
+                ctx.fillStyle = 'white';
+                ctx.fillRect(crystal.x + 6, csy + 6, 4, 7);
+                ctx.restore();
+            }
+        }
+
+        if (perfectZoneActive && currentTopBlock) {
+            const centerWorldX = perfectZoneCenterX;
+            const lineY = currentTopBlock.y - cameraYOffset - BLOCK_H / 2;
+            ctx.beginPath();
+            ctx.moveTo(centerWorldX - 4, lineY - 10);
+            ctx.lineTo(centerWorldX + 4, lineY - 10);
+            ctx.lineTo(centerWorldX, lineY);
+            ctx.fillStyle = '#9eff7a';
+            ctx.fill();
+            ctx.fillStyle = '#ccff99';
+            ctx.fillRect(centerWorldX - 3, lineY - 12, 6, 6);
+        }
+
+        for (const p of particles) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.life);
+            ctx.translate(p.x, p.y - cameraYOffset);
+            ctx.rotate(p.rot || 0);
+            ctx.fillStyle = p.color;
+            const s = p.size || 3;
+            ctx.fillRect(-s / 2, -s / 2, s, s);
+            ctx.restore();
+        }
+
+        for (const ft of floatingTexts) {
+            ctx.globalAlpha = Math.max(0, ft.life);
+            ctx.font = 'bold 22px "Poppins", system-ui';
+            ctx.shadowBlur = 3;
+            ctx.shadowColor = 'black';
+            ctx.fillStyle = ft.color;
+            ctx.fillText(ft.text, ft.baseX - 25, ft.baseY - cameraYOffset);
+        }
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+
+        if (perfectFlash.active && perfectFlash.timer > 0) {
+            perfectFlash.timer--;
+            ctx.font = 'bold 28px "Poppins"';
+            ctx.fillStyle = `rgba(255, 220, 80, ${Math.min(1, perfectFlash.timer / 8)})`;
+            const topY = currentTopBlock ? (currentTopBlock.y - cameraYOffset - BLOCK_H - 20) : 120;
+            ctx.fillText('⚡ PERFECT!', CW / 2 - 90, topY);
+            if (perfectFlash.timer <= 0) perfectFlash.active = false;
+        }
+
+        if (toast) {
+            const t = toast.timer;
+            const slideIn = t < 18 ? (18 - t) / 18 : 0;
+            const slideOut = t > 150 ? (t - 150) / 20 : 0;
+            const slide = Math.max(slideIn, slideOut);
+            const y = 16 - slide * 70;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, 1 - slideOut);
+            roundRect(CW / 2 - 150, y, 300, 46, 20);
+            ctx.fillStyle = 'rgba(10,14,26,0.94)';
+            ctx.fill();
+            ctx.strokeStyle = '#ffcd7e';
+            ctx.lineWidth = 1.5;
+            ctx.stroke();
+            ctx.font = '22px sans-serif';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(toast.icon, CW / 2 - 132, y + 32);
+            ctx.font = 'bold 11px "Poppins", sans-serif';
+            ctx.fillStyle = '#ffdf9c';
+            ctx.fillText('ACHIEVEMENT UNLOCKED', CW / 2 - 95, y + 18);
+            ctx.font = 'bold 15px "Poppins", sans-serif';
+            ctx.fillStyle = '#fff';
+            ctx.fillText(toast.name, CW / 2 - 95, y + 36);
+            ctx.restore();
+        }
+
+        if (!gameRunning) {
+            ctx.fillStyle = 'rgba(3,5,10,0.72)';
+            ctx.fillRect(0, 0, CW, CH);
+            ctx.textAlign = 'center';
+            ctx.font = '800 32px "Poppins", sans-serif';
+            ctx.fillStyle = '#ff8a8a';
+            ctx.fillText('GAME OVER', CW / 2, CH / 2 - 70);
+            ctx.font = 'bold 52px "Poppins", sans-serif';
+            ctx.fillStyle = '#ffe9b0';
+            ctx.fillText(`${currentScore}`, CW / 2, CH / 2 - 10);
+            ctx.font = '600 15px "Poppins", sans-serif';
+            ctx.fillStyle = '#bcd0ff';
+            ctx.fillText(isNewRecord ? '🏆 NEW RECORD!' : `Best: ${bestScore}`, CW / 2, CH / 2 + 22);
+            ctx.font = '500 13px "Poppins", sans-serif';
+            ctx.fillStyle = '#9fb3d9';
+            ctx.fillText(`${Math.max(0, tower.length - 1)} blocks stacked`, CW / 2, CH / 2 + 50);
+            ctx.textAlign = 'left';
+        }
+
+        ctx.restore();
+
+        if (gameRunning) {
+            ctx.font = 'bold 12px monospace';
+            ctx.textAlign = 'right';
+            let iy = 34;
+            if (slowmoBlocksLeft > 0) { ctx.fillStyle = '#aaffff'; ctx.fillText(`🐢 SLOWMO ×${slowmoBlocksLeft}`, CW - 14, iy); iy += 17; }
+            if (precisionBlocksLeft > 0) { ctx.fillStyle = '#ffcf9c'; ctx.fillText(`🎯 PRECISION ×${precisionBlocksLeft}`, CW - 14, iy); iy += 17; }
+            if (doubleBlocksLeft > 0) { ctx.fillStyle = '#ff9c9c'; ctx.fillText(`💥 DOUBLE PTS ×${doubleBlocksLeft}`, CW - 14, iy); iy += 17; }
+            ctx.textAlign = 'left';
+        }
+    }
+
+    // ================= LOOP =================
+    function gameLoop() {
+        frameCount++;
+        if (gameRunning) {
+            updateMoving();
+            updateCamera();
+            checkCrystalCollision();
+        }
+        updateParticlesAndTexts();
+        updateBackground();
+        draw();
+
+        displayedScore += (currentScore - displayedScore) * 0.25;
+        if (Math.abs(currentScore - displayedScore) < 0.5) displayedScore = currentScore;
+        scoreElem.innerText = Math.round(displayedScore);
+
+        requestAnimationFrame(gameLoop);
+    }
+
+    // ================= INPUT =================
+    function onTap(e) {
+        if (!gameRunning) return;
+        e.preventDefault();
+        ensureAudio();
+        performStack();
+    }
+
+    function attachEvents() {
+        canvas.addEventListener('mousedown', onTap);
+        canvas.addEventListener('touchstart', onTap, { passive: false });
+        window.addEventListener('keydown', (e) => {
+            if (e.code === 'Space' && gameRunning) {
+                e.preventDefault();
+                ensureAudio();
+                performStack();
+            }
+            if (e.code === 'KeyR') {
+                e.preventDefault();
+                restartGame();
+            }
+        });
+    }
+
+    function restartGame() {
+        initGame();
+        gameRunning = true;
+        processingTap = false;
+        hideHighscoreOverlay();
+    }
+
+    const vibrate = (duration) => { if (navigator.vibrate) navigator.vibrate(duration || 20); };
+
+    function showHighscoreOverlay() {
+        highscoreOverlay.classList.remove('hide-overlay');
+        leaderboardMode = 'local';
+        document.getElementById('lbLocalBtn').classList.add('active');
+        document.getElementById('lbGlobalBtn').classList.remove('active');
+        if (currentScore > 0 && !scoreSaved && pendingScore === currentScore) {
+            overlayNameEntry.style.display = 'block';
+            const savedName = localStorage.getItem('stacksnap_nickname');
+            if (savedName) overlayPlayerName.value = savedName;
+            updateScoreRecapPreview();
+        } else {
+            overlayNameEntry.style.display = 'none';
+        }
+        renderOverlayList();
+        // Carica la classifica globale in background per la stima della posizione e per lo switch Globale
+        fetchGlobalLeaderboard().then(() => {
+            if (overlayNameEntry.style.display !== 'none') updateScoreRecapPreview();
+            if (leaderboardMode === 'global') renderOverlayList();
+        });
+    }
+    function hideHighscoreOverlay() { highscoreOverlay.classList.add('hide-overlay'); }
+    async function saveCurrentScoreWithName() {
+        let name = overlayPlayerName.value.trim();
+        if (name === "") name = "Anonymous";
+        localStorage.setItem('stacksnap_nickname', name);
+        addHighScore(name, pendingScore);
+        scoreSaved = true;
+        overlaySaveBtn.disabled = true;
+        overlaySaveBtn.textContent = '...';
+        const result = await submitGlobalScore(name, pendingScore, pendingBlocks);
+        overlaySaveBtn.disabled = false;
+        overlaySaveBtn.textContent = 'SAVE';
+        overlayNameEntry.style.display = 'none';
+        const recap = document.getElementById('scoreRecap');
+        if (result && result.ok && typeof result.rank === 'number') {
+            recap.innerHTML = `Score: <b>${pendingScore}</b> · You're <b>#${result.rank}</b> on the global leaderboard!`;
+        } else if (recap) {
+            recap.innerHTML = `Score: <b>${pendingScore}</b> · <span style="opacity:0.7;">couldn't submit to the global leaderboard</span>`;
+        }
+        renderOverlayList();
+    }
+
+    // ================= MENU / MODALI =================
+    const burgerIcon = document.getElementById('burgerIcon');
+    const menuPanel = document.getElementById('menuPanel');
+    const closeMenuBtn = document.getElementById('closeMenuBtn');
+    const supportLink = document.getElementById('supportLink');
+    const guideBtn = document.getElementById('guideBtn');
+    const guideModal = document.getElementById('guideModal');
+    const changelogBtn = document.getElementById('changelogBtn');
+    const changelogModal = document.getElementById('changelogModal');
+    const statsBtn = document.getElementById('statsBtn');
+    const statsModal = document.getElementById('statsModal');
+    const globalBtn = document.getElementById('globalBtn');
+    const globalModal = document.getElementById('globalModal');
+    const refreshGlobalBtn = document.getElementById('refreshGlobalBtn');
+    const lbLocalBtn = document.getElementById('lbLocalBtn');
+    const lbGlobalBtn = document.getElementById('lbGlobalBtn');
+    const resetStatsBtn = document.getElementById('resetStatsBtn');
+    const statsList = document.getElementById('statsList');
+    const achvList = document.getElementById('achvList');
+    const tabBtns = document.querySelectorAll('.tab-btn');
+    const tabStats = document.getElementById('tabStats');
+    const tabAchv = document.getElementById('tabAchv');
+    const ALL_MODALS = [guideModal, changelogModal, statsModal, globalModal];
+
+    // ================= SPLASH SCREEN (regole rapide) =================
+    const splashModal = document.getElementById('splashModal');
+    const hideSplashCheckbox = document.getElementById('hideSplashCheckbox');
+    function dismissSplash() {
+        if (hideSplashCheckbox.checked) localStorage.setItem('stacksnap_hide_splash', '1');
+        splashModal.style.display = 'none';
+    }
+    function showSplashScreen() {
+        document.getElementById('splashVersion').textContent = `v${APP_VERSION}`;
+        hideSplashCheckbox.checked = false;
+        splashModal.style.display = 'flex';
+    }
+    function maybeShowSplash() {
+        if (localStorage.getItem('stacksnap_hide_splash') !== '1') showSplashScreen();
+    }
+    document.getElementById('splashStartBtn').addEventListener('click', dismissSplash);
+    window.addEventListener('click', (e) => { if (e.target === splashModal) dismissSplash(); });
+
+    function toggleMenu() { menuPanel.style.display = menuPanel.style.display === 'flex' ? 'none' : 'flex'; }
+    burgerIcon.addEventListener('click', toggleMenu);
+    closeMenuBtn.addEventListener('click', () => menuPanel.style.display = 'none');
+
+    function formatDuration(ms) {
+        const totalSec = Math.floor(ms / 1000);
+        const h = Math.floor(totalSec / 3600);
+        const m = Math.floor((totalSec % 3600) / 60);
+        const s = totalSec % 60;
+        if (h > 0) return `${h}h ${m}m`;
+        if (m > 0) return `${m}m ${s}s`;
+        return `${s}s`;
+    }
+
+    function renderStatsAndAchievements() {
+        const avgBlocks = stats.gamesPlayed > 0 ? Math.round(stats.totalBlocks / stats.gamesPlayed) : 0;
+        statsList.innerHTML = `
+            <li><span>🏆 Best score</span><b>${bestScore}</b></li>
+            <li><span>🎮 Games played</span><b>${stats.gamesPlayed}</b></li>
+            <li><span>🧱 Blocks stacked (total)</span><b>${stats.totalBlocks}</b></li>
+            <li><span>🏗️ Tallest tower reached</span><b>${stats.bestTower}</b></li>
+            <li><span>📈 Average blocks per game</span><b>${avgBlocks}</b></li>
+            <li><span>🎯 Best Perfect streak</span><b>${stats.bestStreak}</b></li>
+            <li><span>✨ Total Perfect blocks</span><b>${stats.totalPerfects}</b></li>
+            <li><span>💎 Crystals collected</span><b>${stats.crystals}</b></li>
+            <li><span>🛟 Safety nets used</span><b>${stats.salvations}</b></li>
+            <li><span>🎉 Milestones reached</span><b>${stats.milestones}</b></li>
+            <li><span>💰 Total points earned</span><b>${stats.totalScore}</b></li>
+            <li><span>⏱️ Total play time</span><b>${formatDuration(stats.totalPlaytimeMs)}</b></li>
+        `;
+        achvList.innerHTML = '';
+        for (const a of ACHIEVEMENTS) {
+            const unlocked = unlockedAchievements.has(a.id);
+            const li = document.createElement('li');
+            li.className = unlocked ? 'unlocked' : '';
+            li.innerHTML = `<span class="achv-icon">${unlocked ? a.icon : '🔒'}</span><span><div class="achv-name">${a.name}</div><div class="achv-desc">${a.desc}</div></span>`;
+            achvList.appendChild(li);
+        }
+    }
+
+    function closeAllModals() { ALL_MODALS.forEach(m => m.style.display = 'none'); }
+
+    guideBtn.addEventListener('click', () => { menuPanel.style.display = 'none'; closeAllModals(); guideModal.style.display = 'flex'; });
+    changelogBtn.addEventListener('click', () => { menuPanel.style.display = 'none'; closeAllModals(); changelogModal.style.display = 'flex'; });
+    statsBtn.addEventListener('click', () => { menuPanel.style.display = 'none'; closeAllModals(); renderStatsAndAchievements(); statsModal.style.display = 'flex'; });
+    globalBtn.addEventListener('click', async () => {
+        menuPanel.style.display = 'none';
+        closeAllModals();
+        globalModal.style.display = 'flex';
+        await renderGlobalModalList();
+    });
+
+    async function renderGlobalModalList() {
+        const listEl = document.getElementById('globalModalList');
+        listEl.innerHTML = '<li>⏳ Loading...</li>';
+        await fetchGlobalLeaderboard();
+        renderGlobalListInto(listEl);
+    }
+    refreshGlobalBtn.addEventListener('click', async () => {
+        refreshGlobalBtn.disabled = true;
+        await fetchGlobalLeaderboard(true);
+        renderGlobalListInto(document.getElementById('globalModalList'));
+        refreshGlobalBtn.disabled = false;
+    });
+
+    lbLocalBtn.addEventListener('click', () => {
+        leaderboardMode = 'local';
+        lbLocalBtn.classList.add('active');
+        lbGlobalBtn.classList.remove('active');
+        renderOverlayList();
+    });
+    lbGlobalBtn.addEventListener('click', async () => {
+        leaderboardMode = 'global';
+        lbGlobalBtn.classList.add('active');
+        lbLocalBtn.classList.remove('active');
+        renderOverlayList();
+        if (!globalScores) { await fetchGlobalLeaderboard(); renderOverlayList(); }
+    });
+
+    document.querySelectorAll('.modal-close-x').forEach(btn => {
+        btn.addEventListener('click', () => { document.getElementById(btn.dataset.close).style.display = 'none'; });
+    });
+    window.addEventListener('click', (e) => { if (ALL_MODALS.includes(e.target)) e.target.style.display = 'none'; });
+    document.addEventListener('click', (e) => { if (!burgerIcon.contains(e.target) && !menuPanel.contains(e.target)) menuPanel.style.display = 'none'; });
+
+    tabBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+            tabBtns.forEach(b => b.classList.remove('active'));
+            btn.classList.add('active');
+            tabStats.classList.add('hide-overlay');
+            tabAchv.classList.add('hide-overlay');
+            if (btn.dataset.tab === 'stats') tabStats.classList.remove('hide-overlay');
+            if (btn.dataset.tab === 'achv') tabAchv.classList.remove('hide-overlay');
+        });
+    });
+
+    overlaySaveBtn.addEventListener('click', () => saveCurrentScoreWithName());
+    overlayPlayerName.addEventListener('keypress', (e) => { if (e.key === 'Enter') saveCurrentScoreWithName(); });
+
+    function resetAllData() {
+        const ok = confirm('Are you sure you want to reset your stats, best score, LOCAL leaderboard and unlocked achievements?\n\nThe global leaderboard is not affected: it\'s permanent and shared with every player.\n\nThis action cannot be undone.');
+        if (!ok) return;
+        localStorage.removeItem('stacksnap_stats');
+        localStorage.removeItem('stacksnap_achv');
+        localStorage.removeItem('stacksnap_best');
+        localStorage.removeItem('stacksnap_highscores');
+        localStorage.removeItem('stacksnap_hide_splash');
+        stats = { gamesPlayed: 0, totalBlocks: 0, bestStreak: 0, crystals: 0, salvations: 0, totalScore: 0, bestTower: 0, totalPerfects: 0, milestones: 0, totalPlaytimeMs: 0 };
+        unlockedAchievements = new Set();
+        bestScore = 0;
+        bestElem.innerText = '0';
+        highScores = [];
+        renderOverlayHighscores();
+        renderStatsAndAchievements();
+        closeAllModals();
+        menuPanel.style.display = 'none';
+        showSplashScreen();
+    }
+    resetStatsBtn.addEventListener('click', resetAllData);
+
+    function renderVersionInfo() {
+        document.getElementById('modalVersion').textContent = `v${APP_VERSION}`;
+        const box = document.getElementById('versionBox');
+        box.innerHTML = CHANGELOG.map(entry =>
+            `<div><b>v${entry.v}</b></div><ul>${entry.notes.map(n => `<li>${n}</li>`).join('')}</ul>`
+        ).join('');
+    }
+
+    function setup() {
+        loadBest();
+        loadHighScores();
+        loadStats();
+        initGame();
+        attachEvents();
+        renderVersionInfo();
+        document.getElementById('restartButton').addEventListener('click', () => restartGame());
+        document.getElementById('restartButtonOverlay').addEventListener('click', () => restartGame());
+        fitStage();
+        gameLoop();
+        maybeShowSplash();
+    }
+    setup();
+})();
+</script>
+</body>
+</html>
