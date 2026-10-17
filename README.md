@@ -1,7 +1,7 @@
 # 🧱 StackSnap · Arcade Plus
 
 [![CI](https://github.com/sputlab/stacksnap/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-2.6.0-blue.svg)](index.html)
+[![Version](https://img.shields.io/badge/version-2.7.0-blue.svg)](index.html)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![PWA Ready](https://img.shields.io/badge/PWA-installable-orange.svg)](manifest.json)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](#architecture--tech-stack)
@@ -14,16 +14,18 @@
 ## ✨ Features
 
 - **🎮 Addictive Arcade Stacking Mechanics**:
-  - Horizontal block oscillation with sub-pixel precision slicing.
-  - **Perfect Alignment Bonus**: Exact placement (or precision-assisted) preserves full platform width and awards **+40 points**.
+  - Horizontal block oscillation with sub-pixel precision slicing and **falling debris physics**.
+  - **Perfect Alignment Bonus**: Exact placement (or precision-assisted) preserves full platform width, awards **+40 points**, and unleashes **radiant shockwave rings**.
   - **Streak Multiplier**: Score 3 Perfects in a row to unleash a **x2 multiplier** for your next 3 blocks.
-  - **Golden Tower**: Every 5th block provides a **+50 bonus**.
+  - **Golden Tower**: Every 5th block provides a **+50 bonus** with a golden aura.
   - **Perfect Zone**: A high-stakes target appears every 10 blocks granting **x3 points**.
   - **Safety Net**: Built-in rescue system automatically recovers a critically thin block once per game.
-  - **Milestone Celebrations**: Every 25 blocks triggers celebratory confetti, fanfare melodies, and camera shake.
+  - **Milestone Celebrations**: Every 25 blocks triggers celebratory 3D tumbling confetti ribbons, fanfare melodies, and camera shake.
   - **Pause & Resume**: Press `P`, `Esc`, or tap the screen to pause and resume at any time. Automatically pauses when opening menus or switching browser tabs.
+  - **Framerate Normalization**: Delta-time (`dt`) physics ensuring consistent speed across 60Hz and 120Hz/144Hz (ProMotion) screens.
 
-- **💎 Power-Up Crystals**:
+- **💎 3D Diamond Power-Up Crystals**:
+  - Rotating 3D faceted gems with pulsing aura rings and orbiting starlet sparkles.
   - 🐢 **Blue (Slowmo)**: Slows sliding block speed by ~42% for 3 blocks.
   - 🎯 **Orange (Precision)**: Forgives alignment gaps up to 10% as Perfect hits.
   - 💥 **Red (Double Points)**: Doubles all points for 3 blocks.
@@ -32,11 +34,10 @@
   - Zero external `.mp3` or `.wav` files required!
   - Real-time procedural audio synthesis using the **Web Audio API** (sine, triangle, square, and sawtooth waves with dynamic envelope shaping).
 
-- **🌌 Dynamic Procedural Visuals**:
-  - Parallax procedural starfield with twinkling phases.
-  - Drifting clouds and procedural city skyline silhouettes.
-  - Smooth day-to-night sky gradient transitioning as the tower ascends.
-  - Particle sparks, floating score popups, and milestone confetti.
+- **🌌 Next-Gen Procedural Visuals & 3D Shaders**:
+  - **3D Beveled Blocks**: Rounded chamfer corners, specular top gloss bar, rim lighting, drop shadows, and landing squash-and-stretch bounce.
+  - **Overhang Debris Physics**: Cut pieces tumble down with rotational velocity and fade out.
+  - **Cosmic Multi-Layer Background**: Altitude-based nebula glow, shooting meteors, parallax starfield with 4-point cross sparkles, and dual-layer city skyline with blinking beacons and illuminated windows.
 
 - **📱 Fully Responsive, PWA & Zero-Build**:
   - Pure Vanilla JavaScript and CSS glassmorphism.
@@ -273,6 +274,14 @@ Submits a new score to the global database, applies anti-cheat validation, and r
 
 ## 📜 Version History
 
+- **v2.7.0**:
+  - **Graphic Engine Overhaul**: Falling slice debris physics when blocks are sliced off (overhang pieces tumble with angular velocity and fade out).
+  - **3D Block Shaders**: Chamfered corners, specular top gloss bars, rim highlights, drop shadows, golden tower aura, and landing squash-and-stretch bounce.
+  - **Radiant Shockwaves**: Expanding double-ring energy shockwaves on Perfect hits.
+  - **Cosmic Multi-layer Sky**: Altitude-based cosmic nebula glow, shooting meteors, twinkling stars with 4-point cross sparkles, and dual-layer city skyline with illuminated windows and blinking beacons.
+  - **3D Faceted Diamond Gems**: Power-up crystals feature rotating 3D facets, pulsing aura halos, and orbiting sparkle starlets.
+  - **3D Tumbling Confetti**: Milestone celebrations burst with 3D paper ribbon ribbons and golden spark fountains.
+  - **Framerate Normalization**: Delta-time (`dt`) physics ensuring consistent speed across 60Hz and 120Hz/144Hz (ProMotion) screens.
 - **v2.6.0**:
   - Complete English localization (screens, modals, messages).
   - Added pause feature (`P`, `Esc`, tap to resume; auto-pauses on modal open or tab switch).
