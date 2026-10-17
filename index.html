@@ -701,8 +701,17 @@
 <script>
 (function(){
     // ================= VERSIONE =================
-    const APP_VERSION = '2.6.0';
+    const APP_VERSION = '2.7.0';
     const CHANGELOG = [
+        { v: '2.7.0', notes: [
+            'Graphic Engine Overhaul: falling slice physics when overhang pieces are sliced off',
+            '3D Block Shaders: chamfered corners, top specular gloss bars, rim highlights, directional drop-shadows, and landing bounce physics',
+            'Radiant Shockwaves: expanding double-ring energy shockwaves on Perfect placements',
+            'Cosmic Multi-layer Background: altitude-dependent nebula glow, shooting stars (meteors), twinkling stars with 4-point cross sparkles, and dual-layer city skyline with glowing windows and beacons',
+            '3D Faceted Diamond Gems: power-up crystals now feature rotating 3D facets, pulsing aura halos, and orbiting sparkle starlets',
+            '3D Tumbling Confetti: milestones burst with 3D paper ribbon physics and sparkling golden particle fountains',
+            'Framerate Normalization: delta-time physics ensuring identical, silky-smooth speed across 60Hz and 120Hz/144Hz (ProMotion) displays'
+        ] },
         { v: '2.6.0', notes: [
             'The whole app is now in English — every screen, menu, and message',
             'Added pause feature: press P or Esc, or tap to resume; auto-pauses when opening menus or switching browser tabs',
@@ -778,11 +787,15 @@
     let movingBlock = { x: BASE_X, width: BASE_W, direction: 1, speed: BASE_SPEED };
     let cameraYOffset = 0;
     let frameCount = 0;
+    let lastFrameTime = performance.now();
 
-    // Feature
+    // Feature & Graphic FX
     let particles = [];
     let floatingTexts = [];
     let trailPositions = [];
+    let fallingSlices = [];
+    let shockwaves = [];
+    let shootingStars = [];
     let colorHue = 210;
     let shakeAmount = 0, shakeFrames = 0;
     let perfectStreak = 0;
@@ -842,23 +855,54 @@
         { id: 'perfectionist',icon:'✨', name: 'Perfectionist',          desc: 'Collect 100 Perfect blocks in total',        check: (s) => s.totalPerfects >= 100 },
     ];
 
-    // Sfondo: stelle, nuvole, skyline
+    // Sfondo: stelle multi-piano, nuvole, skyline a doppio piano con finestre illuminate
     const stars = [];
-    for (let i = 0; i < 70; i++) {
-        stars.push({ x: Math.random() * CW, y: Math.random() * CH * 0.78, r: Math.random() * 1.5 + 0.4, phase: Math.random() * Math.PI * 2, speed: 0.02 + Math.random() * 0.04 });
+    for (let i = 0; i < 85; i++) {
+        stars.push({
+            x: Math.random() * CW,
+            y: Math.random() * CH * 0.85,
+            r: Math.random() * 1.6 + 0.35,
+            phase: Math.random() * Math.PI * 2,
+            speed: 0.02 + Math.random() * 0.04,
+            isBright: Math.random() < 0.16
+        });
     }
     const clouds = [];
     for (let i = 0; i < 5; i++) {
-        clouds.push({ x: Math.random() * CW, y: 50 + Math.random() * 170, w: 70 + Math.random() * 100, h: 16 + Math.random() * 14, spd: 0.12 + Math.random() * 0.18 });
+        clouds.push({
+            x: Math.random() * CW,
+            y: 40 + Math.random() * 180,
+            w: 80 + Math.random() * 120,
+            h: 18 + Math.random() * 16,
+            spd: 0.09 + Math.random() * 0.14
+        });
     }
-    const skyline = [];
-    (function buildSkyline() {
-        let x = 0;
-        while (x < CW) {
-            const w = 26 + Math.random() * 46;
-            const h = 36 + Math.random() * 130;
-            skyline.push({ x, w, h });
-            x += w + 2;
+    const farSkyline = [];
+    const nearSkyline = [];
+    (function buildCity() {
+        let fx = 0;
+        while (fx < CW) {
+            const w = 30 + Math.random() * 52;
+            const h = 48 + Math.random() * 150;
+            farSkyline.push({ x: fx, w, h });
+            fx += w + 2;
+        }
+        let nx = 0;
+        while (nx < CW) {
+            const w = 24 + Math.random() * 42;
+            const h = 24 + Math.random() * 105;
+            const windows = [];
+            const cols = Math.floor(w / 8);
+            const rows = Math.floor(h / 12);
+            for (let r = 1; r < rows - 1; r++) {
+                for (let c = 1; c < cols - 1; c++) {
+                    if (Math.random() < 0.28) {
+                        windows.push({ rx: c * 7, ry: r * 10 });
+                    }
+                }
+            }
+            nearSkyline.push({ x: nx, w, h, hasBeacon: Math.random() < 0.35, windows });
+            nx += w + 2;
         }
     })();
 
@@ -1080,62 +1124,126 @@
     }
 
     // ================= CAMERA =================
-    function updateCamera() {
+    function updateCamera(dt) {
+        if (!dt) dt = 1;
         // La camera insegue sempre il blocco in cima alla torre, senza limiti di altezza:
         // prima la torre cresceva ma oltre ~20 blocchi l'offset veniva bloccato (clamp a 0/maxCam)
         // e la visuale smetteva di salire, rendendo impossibile continuare a giocare.
         if (!currentTopBlock) return;
         const targetY = currentTopBlock.y - 200;
         const delta = targetY - cameraYOffset;
-        cameraYOffset += delta * 0.12;
+        cameraYOffset += delta * Math.min(1, 0.12 * dt);
     }
     function startShake(intensity, frames) { shakeAmount = intensity; shakeFrames = frames; }
 
     // ================= PARTICELLE E TESTI (coordinate MONDO, convertite in schermo al disegno) =================
     function addParticles(x, y, isPerfect, isGolden, isPerfectZone) {
-        const count = isPerfect ? 14 : 7;
+        const count = isPerfect ? 18 : 9;
         const baseColor = isPerfectZone ? `hsl(80,100%,65%)` : (isGolden ? `hsl(50,100%,60%)` : `hsl(${colorHue + 30},85%,65%)`);
         for (let i = 0; i < count; i++) {
+            const ang = Math.random() * Math.PI * 2;
+            const spd = 1.2 + Math.random() * (isPerfect ? 4.5 : 2.8);
             particles.push({
-                x: x + Math.random() * movingBlock.width, y: y,
-                vx: (Math.random() - 0.5) * 3, vy: -Math.random() * 4 - 1.5,
-                life: 1.0, color: isPerfect ? `hsl(${45 + Math.random() * 30},100%,65%)` : baseColor,
-                size: 3, rot: 0, rotSpeed: 0, grav: 0.2
+                x: x + Math.random() * movingBlock.width,
+                y: y,
+                vx: Math.cos(ang) * spd,
+                vy: -Math.abs(Math.sin(ang)) * spd - 1.2,
+                life: 1.0,
+                color: isPerfect ? `hsl(${40 + Math.random() * 35},100%,68%)` : baseColor,
+                size: 2.5 + Math.random() * (isPerfect ? 2.5 : 1.5),
+                sparkle: isPerfect,
+                grav: 0.16
             });
         }
     }
-    const CONFETTI_COLORS = ['#ffb454', '#5eead4', '#9dff6b', '#ff9ecb', '#ffe27a', '#8ecbff'];
+
+    const CONFETTI_COLORS = ['#ffb454', '#5eead4', '#9dff6b', '#ff9ecb', '#ffe27a', '#8ecbff', '#c084fc'];
     function addConfetti(x, y, count) {
         for (let i = 0; i < count; i++) {
             particles.push({
-                x: x + (Math.random() - 0.5) * 70, y: y - 10,
-                vx: (Math.random() - 0.5) * 5, vy: -Math.random() * 6 - 2,
-                life: 1.3, color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
-                size: 4 + Math.random() * 3, rot: Math.random() * Math.PI, rotSpeed: (Math.random() - 0.5) * 0.3, grav: 0.15
+                isConfetti: true,
+                x: x + (Math.random() - 0.5) * 80,
+                y: y - 10,
+                vx: (Math.random() - 0.5) * 6,
+                vy: -Math.random() * 7 - 2.5,
+                life: 1.4,
+                color: CONFETTI_COLORS[Math.floor(Math.random() * CONFETTI_COLORS.length)],
+                w: 5 + Math.random() * 4,
+                h: 8 + Math.random() * 5,
+                rotX: Math.random() * Math.PI,
+                rotY: Math.random() * Math.PI,
+                rotZ: Math.random() * Math.PI,
+                vRotX: (Math.random() - 0.5) * 0.25,
+                vRotY: (Math.random() - 0.5) * 0.2,
+                vRotZ: (Math.random() - 0.5) * 0.15,
+                grav: 0.12
             });
         }
     }
+
     function addFloatingText(text, x, y, color) {
         if (floatingTexts.length > 12) floatingTexts.shift();
         const offsetX = (Math.random() - 0.5) * 20;
         const offsetY = (Math.random() - 0.5) * 12 - 6;
         floatingTexts.push({ text, baseX: x + offsetX, baseY: y + offsetY - 12, life: 1.6, vy: -0.7, color: color || '#ffdd99' });
     }
-    function updateParticlesAndTexts() {
+
+    function updateParticlesAndTexts(dt) {
+        if (!dt) dt = 1;
+        // Standard and confetti particles
         for (let i = 0; i < particles.length; i++) {
             const p = particles[i];
-            p.x += p.vx; p.y += p.vy; p.vy += (p.grav || 0.2);
-            p.rot = (p.rot || 0) + (p.rotSpeed || 0);
-            p.life -= 0.018;
-            if (p.life <= 0 || (p.y - cameraYOffset) > CH + 50) { particles.splice(i, 1); i--; }
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.vy += (p.grav || 0.2) * dt;
+            if (p.isConfetti) {
+                p.rotX += (p.vRotX || 0) * dt;
+                p.rotY += (p.vRotY || 0) * dt;
+                p.rotZ += (p.vRotZ || 0) * dt;
+            } else {
+                p.rot = (p.rot || 0) + (p.rotSpeed || 0) * dt;
+            }
+            p.life -= (p.isConfetti ? 0.012 : 0.018) * dt;
+            if (p.life <= 0 || (p.y - cameraYOffset) > CH + 60) {
+                particles.splice(i, 1);
+                i--;
+            }
         }
+        // Floating score text
         for (let i = 0; i < floatingTexts.length; i++) {
-            floatingTexts[i].baseY += floatingTexts[i].vy;
-            floatingTexts[i].life -= 0.007;
-            if (floatingTexts[i].life <= 0) { floatingTexts.splice(i, 1); i--; }
+            floatingTexts[i].baseY += floatingTexts[i].vy * dt;
+            floatingTexts[i].life -= 0.007 * dt;
+            if (floatingTexts[i].life <= 0) {
+                floatingTexts.splice(i, 1);
+                i--;
+            }
         }
+        // Falling sliced block debris
+        for (let i = 0; i < fallingSlices.length; i++) {
+            const s = fallingSlices[i];
+            s.x += s.vx * dt;
+            s.y += s.vy * dt;
+            s.vy += s.grav * dt;
+            s.rot += s.vRot * dt;
+            s.life -= 0.016 * dt;
+            if (s.life <= 0 || (s.y - cameraYOffset) > CH + 100) {
+                fallingSlices.splice(i, 1);
+                i--;
+            }
+        }
+        // Shockwave rings
+        for (let i = 0; i < shockwaves.length; i++) {
+            const sw = shockwaves[i];
+            sw.radius += (sw.maxRadius - sw.radius) * Math.min(1, 0.18 * dt) + 1.2 * dt;
+            sw.alpha -= 0.038 * dt;
+            if (sw.alpha <= 0) {
+                shockwaves.splice(i, 1);
+                i--;
+            }
+        }
+        // Achievement unlock toast
         if (!toast && achievementQueue.length) { toast = achievementQueue.shift(); toast.timer = 0; }
-        if (toast) { toast.timer++; if (toast.timer > 170) toast = null; }
+        if (toast) { toast.timer += dt; if (toast.timer > 170) toast = null; }
     }
 
     // ================= POWER-UP CRISTALLO (posizione relativa alla torre; 3 tipi casuali) =================
@@ -1203,6 +1311,9 @@
         particles = [];
         floatingTexts = [];
         trailPositions = [];
+        fallingSlices = [];
+        shockwaves = [];
+        shootingStars = [];
         colorHue = 210;
         perfectFlash.active = false;
         scoreSaved = false;
@@ -1223,6 +1334,7 @@
         cameraYOffset = 0;
         blocksElem.innerText = '0';
         gameStartTime = Date.now();
+        lastFrameTime = performance.now();
 
         hideHighscoreOverlay();
     }
@@ -1320,14 +1432,41 @@
         let newX = overlapL;
         let newWidth = overlapW;
         if (isPerfect) {
-            // Un Perfetto (anche quello "assistito" dal cristallo Precisione) mantiene sempre
-            // la piena larghezza, allineato esattamente al blocco sottostante. Prima, un colpo
-            // perdonato dal cristallo arancione restringeva comunque il blocco alla sovrapposizione
-            // reale pur segnandolo come "Perfetto!": dopo 3 colpi di fila il blocco si assottigliava
-            // silenziosamente (fino al ~73% della larghezza) mentre la velocità continuava ad
-            // aumentare normalmente, dando la sensazione di un blocco improvvisamente "impazzito".
             newX = under.x;
             newWidth = under.width;
+            shockwaves.push({
+                x: newX + newWidth / 2,
+                y: under.y - BLOCK_H / 2,
+                radius: 8,
+                maxRadius: newWidth * 0.85 + 32,
+                alpha: 0.95,
+                color: precisionForgiven ? '255, 179, 71' : '255, 230, 140'
+            });
+        } else {
+            // Genera il pezzo tagliato (overhang) con fisica di caduta e rotazione
+            let sliceX = 0, sliceW = 0;
+            if (mL < uL) {
+                sliceX = mL;
+                sliceW = uL - mL;
+            } else if (mR > uR) {
+                sliceX = uR;
+                sliceW = mR - uR;
+            }
+            if (sliceW > 0.6) {
+                fallingSlices.push({
+                    x: sliceX,
+                    y: under.y - BLOCK_H,
+                    width: sliceW,
+                    height: BLOCK_H,
+                    hue: colorHue,
+                    vx: (mL < uL ? -2.4 : 2.4) + (Math.random() - 0.5) * 0.6,
+                    vy: -1.2 - Math.random() * 1.4,
+                    rot: 0,
+                    vRot: (mL < uL ? -0.06 : 0.06) + (Math.random() - 0.5) * 0.03,
+                    grav: 0.42,
+                    life: 1.0
+                });
+            }
         }
         if (!salvationUsed && newWidth > MIN_W && newWidth < MIN_W * 1.8) {
             salvationUsed = true;
@@ -1338,7 +1477,7 @@
         }
 
         const newY = under.y - BLOCK_H;
-        const newBlock = { x: newX, y: newY, width: newWidth };
+        const newBlock = { x: newX, y: newY, width: newWidth, squash: 0.82 };
         tower.push(newBlock);
         currentTopBlock = newBlock;
         stats.totalBlocks++;
@@ -1404,49 +1543,125 @@
         return true;
     }
 
-    function updateMoving() {
+    function updateMoving(dt) {
         if (!gameRunning) return;
+        if (!dt) dt = 1;
         const spd = movingBlock.speed;
-        movingBlock.x += spd * movingBlock.direction;
+        movingBlock.x += spd * movingBlock.direction * dt;
         const w = movingBlock.width;
         if (movingBlock.x <= 0) { movingBlock.x = 0; movingBlock.direction = 1; }
         if (movingBlock.x + w >= CW) { movingBlock.x = CW - w; movingBlock.direction = -1; }
-        if (Math.random() < 0.4) {
+        if (Math.random() < 0.45 * dt) {
             trailPositions.unshift({ x: movingBlock.x, age: 0 });
             if (trailPositions.length > 5) trailPositions.pop();
         }
-        for (const t of trailPositions) t.age = (t.age || 0) + 1;
+        for (const t of trailPositions) t.age = (t.age || 0) + 1 * dt;
     }
 
     // ================= SFONDO =================
-    function updateBackground() {
-        for (const st of stars) st.phase += st.speed;
+    function updateBackground(dt) {
+        if (!dt) dt = 1;
+        for (const st of stars) st.phase += st.speed * dt;
         for (const c of clouds) {
-            c.x += c.spd;
+            c.x += c.spd * dt;
             if (c.x > CW + 80) c.x = -80;
         }
+        if (Math.random() < 0.005 && shootingStars.length < 2) {
+            shootingStars.push({
+                x: Math.random() * (CW * 0.7),
+                y: Math.random() * (CH * 0.35),
+                vx: 5 + Math.random() * 4,
+                vy: 2.2 + Math.random() * 2,
+                len: 50 + Math.random() * 35,
+                life: 1.0,
+                color: Math.random() < 0.5 ? '#5eead4' : '#ffdf9c'
+            });
+        }
+        for (let i = 0; i < shootingStars.length; i++) {
+            const s = shootingStars[i];
+            s.x += s.vx * dt;
+            s.y += s.vy * dt;
+            s.life -= 0.032 * dt;
+            if (s.life <= 0 || s.x > CW + 60 || s.y > CH) {
+                shootingStars.splice(i, 1);
+                i--;
+            }
+        }
     }
+
     function drawBackground() {
         const nightFactor = Math.min(1, tower.length / 120);
+
+        // Sky base gradient: shifts from dusk teal/amber to twilight violet to midnight obsidian
         const grad = ctx.createLinearGradient(0, 0, 0, CH);
-        grad.addColorStop(0, `hsl(${colorHue}, 55%, ${Math.max(4, 13 - nightFactor * 8)}%)`);
-        grad.addColorStop(1, `hsl(${colorHue}, 45%, ${Math.max(3, 7 - nightFactor * 3)}%)`);
+        grad.addColorStop(0, `hsl(${colorHue}, 60%, ${Math.max(3, 14 - nightFactor * 9)}%)`);
+        grad.addColorStop(0.5, `hsl(${(colorHue + 20) % 360}, 50%, ${Math.max(2, 9 - nightFactor * 5)}%)`);
+        grad.addColorStop(1, `hsl(${colorHue}, 45%, ${Math.max(2, 6 - nightFactor * 3)}%)`);
         ctx.fillStyle = grad;
         ctx.fillRect(0, 0, CW, CH);
 
+        // Cosmic nebula glow at high altitudes (tower >= 20)
+        if (tower.length >= 20) {
+            const nebulaFactor = Math.min(1, (tower.length - 20) / 80);
+            const nebGrad = ctx.createRadialGradient(CW * 0.7, CH * 0.25, 10, CW * 0.7, CH * 0.25, CW * 0.6);
+            nebGrad.addColorStop(0, `hsla(${(colorHue + 80) % 360}, 80%, 55%, ${0.12 * nebulaFactor})`);
+            nebGrad.addColorStop(0.5, `hsla(${(colorHue + 140) % 360}, 70%, 45%, ${0.06 * nebulaFactor})`);
+            nebGrad.addColorStop(1, 'transparent');
+            ctx.fillStyle = nebGrad;
+            ctx.fillRect(0, 0, CW, CH);
+        }
+
+        // Shooting stars (meteors)
+        for (const s of shootingStars) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, s.life);
+            const tailGrad = ctx.createLinearGradient(s.x, s.y, s.x - s.vx * (s.len / 5), s.y - s.vy * (s.len / 5));
+            tailGrad.addColorStop(0, '#ffffff');
+            tailGrad.addColorStop(0.3, s.color);
+            tailGrad.addColorStop(1, 'transparent');
+            ctx.strokeStyle = tailGrad;
+            ctx.lineWidth = 2.2;
+            ctx.beginPath();
+            ctx.moveTo(s.x, s.y);
+            ctx.lineTo(s.x - s.vx * (s.len / 5), s.y - s.vy * (s.len / 5));
+            ctx.stroke();
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, 1.8, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+        }
+
+        // Parallax stars
         ctx.save();
+        const starCamShift = (cameraYOffset * 0.04) % CH;
         for (const st of stars) {
             const tw = 0.35 + 0.65 * Math.abs(Math.sin(st.phase));
             ctx.globalAlpha = tw * (0.25 + nightFactor * 0.75);
             ctx.fillStyle = '#ffffff';
+            let sy = (st.y - starCamShift);
+            if (sy < 0) sy += CH;
+            if (sy > CH) sy -= CH;
+
             ctx.beginPath();
-            ctx.arc(st.x, st.y, st.r, 0, Math.PI * 2);
+            ctx.arc(st.x, sy, st.r, 0, Math.PI * 2);
             ctx.fill();
+
+            // 4-point sparkle cross on brightest stars
+            if (st.isBright && tw > 0.75) {
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                ctx.lineWidth = 0.8;
+                ctx.beginPath();
+                ctx.moveTo(st.x - 3, sy); ctx.lineTo(st.x + 3, sy);
+                ctx.moveTo(st.x, sy - 3); ctx.lineTo(st.x, sy + 3);
+                ctx.stroke();
+            }
         }
         ctx.restore();
 
+        // Parallax drifting clouds
         ctx.save();
-        ctx.globalAlpha = 0.09 + (1 - nightFactor) * 0.09;
+        ctx.globalAlpha = 0.08 + (1 - nightFactor) * 0.08;
         ctx.fillStyle = '#ffffff';
         for (const c of clouds) {
             ctx.beginPath();
@@ -1455,11 +1670,44 @@
         }
         ctx.restore();
 
+        // Far city skyline (slower parallax, darker)
         ctx.save();
-        ctx.globalAlpha = 0.55;
-        ctx.fillStyle = `hsl(${colorHue}, 40%, ${Math.max(2, 6 - nightFactor * 3)}%)`;
-        const lift = Math.min(Math.abs(cameraYOffset) * 0.03, 40);
-        for (const b of skyline) ctx.fillRect(b.x, CH - b.h + lift, b.w, b.h + 60);
+        ctx.globalAlpha = 0.35;
+        ctx.fillStyle = `hsl(${colorHue}, 35%, ${Math.max(2, 5 - nightFactor * 2)}%)`;
+        const farLift = Math.min(Math.abs(cameraYOffset) * 0.018, 55);
+        for (const b of farSkyline) {
+            ctx.fillRect(b.x, CH - b.h + farLift, b.w, b.h + 80);
+        }
+        ctx.restore();
+
+        // Near city skyline (moderate parallax with lit windows and beacons)
+        ctx.save();
+        ctx.globalAlpha = 0.65;
+        ctx.fillStyle = `hsl(${colorHue}, 42%, ${Math.max(2, 7 - nightFactor * 3)}%)`;
+        const nearLift = Math.min(Math.abs(cameraYOffset) * 0.038, 70);
+        for (const b of nearSkyline) {
+            const by = CH - b.h + nearLift;
+            ctx.fillRect(b.x, by, b.w, b.h + 80);
+
+            // Lit windows
+            if (b.windows && b.windows.length) {
+                ctx.fillStyle = 'rgba(254, 240, 138, 0.55)';
+                for (const w of b.windows) {
+                    ctx.fillRect(b.x + w.rx, by + w.ry, 3, 4.5);
+                }
+                ctx.fillStyle = `hsl(${colorHue}, 42%, ${Math.max(2, 7 - nightFactor * 3)}%)`;
+            }
+
+            // Beacon on tall buildings
+            if (b.hasBeacon) {
+                const beaconFlash = (Math.sin(frameCount * 0.06 + b.x) > 0.5);
+                if (beaconFlash) {
+                    ctx.fillStyle = '#ff4444';
+                    ctx.fillRect(b.x + b.w / 2 - 1, by - 4, 2, 4);
+                    ctx.fillStyle = `hsl(${colorHue}, 42%, ${Math.max(2, 7 - nightFactor * 3)}%)`;
+                }
+            }
+        }
         ctx.restore();
     }
 
@@ -1476,30 +1724,65 @@
 
     function drawBlock(b, sy, i, isTop) {
         const w = b.width;
-        let lightness = 42 + (i % 8) * 2.5;
-        let sat = 58;
-        if (isTop) { lightness = 72; sat = 78; }
+        let squash = b.squash || 1;
+        if (b.squash !== undefined && b.squash < 1) {
+            b.squash += (1 - b.squash) * 0.24;
+            if (b.squash > 0.99) delete b.squash;
+        }
+
+        const curH = BLOCK_H * squash;
+        const curY = sy + (BLOCK_H - curH);
+
+        let lightness = 42 + (i % 8) * 2.8;
+        let sat = 62;
+        if (isTop) { lightness = 70; sat = 82; }
+
         ctx.save();
         ctx.shadowColor = 'rgba(0,0,0,0.45)';
-        ctx.shadowBlur = 7;
+        ctx.shadowBlur = 8;
         ctx.shadowOffsetY = 3;
-        const g = ctx.createLinearGradient(b.x, sy, b.x, sy + BLOCK_H);
-        g.addColorStop(0, `hsl(${colorHue}, ${sat + 10}%, ${Math.min(92, lightness + 16)}%)`);
-        g.addColorStop(0.55, `hsl(${colorHue}, ${sat}%, ${lightness}%)`);
-        g.addColorStop(1, `hsl(${colorHue}, ${Math.max(20, sat - 10)}%, ${Math.max(8, lightness - 18)}%)`);
+
+        // Main body 3D gradient
+        const g = ctx.createLinearGradient(b.x, curY, b.x, curY + curH);
+        g.addColorStop(0, `hsl(${colorHue}, ${sat + 8}%, ${Math.min(94, lightness + 18)}%)`);
+        g.addColorStop(0.25, `hsl(${colorHue}, ${sat}%, ${lightness + 4}%)`);
+        g.addColorStop(0.7, `hsl(${colorHue}, ${sat - 4}%, ${lightness - 4}%)`);
+        g.addColorStop(1, `hsl(${colorHue}, ${Math.max(20, sat - 12)}%, ${Math.max(8, lightness - 18)}%)`);
         ctx.fillStyle = g;
-        ctx.fillRect(b.x, sy, w, BLOCK_H);
-        ctx.shadowBlur = 0; ctx.shadowOffsetY = 0;
-        ctx.fillStyle = `hsla(${colorHue}, 90%, 92%, 0.35)`;
-        ctx.fillRect(b.x, sy, w, 3);
+
+        // Beveled smooth corners
+        roundRect(b.x, curY, w, curH, 3);
+        ctx.fill();
+
+        ctx.shadowBlur = 0;
+        ctx.shadowOffsetY = 0;
+
+        // Top glossy specular highlight
+        ctx.fillStyle = `hsla(${colorHue}, 90%, 95%, 0.45)`;
+        roundRect(b.x + 2, curY + 1, Math.max(2, w - 4), 3.5, 1.5);
+        ctx.fill();
+
+        // Left rim highlight (simulating light from top-left)
+        ctx.fillStyle = `hsla(${colorHue}, 95%, 90%, 0.25)`;
+        ctx.fillRect(b.x + 0.5, curY + 2, 2, Math.max(2, curH - 4));
+
+        // Right shadow edge
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.22)';
+        ctx.fillRect(b.x + w - 2.5, curY + 2, 2, Math.max(2, curH - 4));
+
+        // Border stroke
         if (goldenBonusActive && isTop) {
-            ctx.strokeStyle = '#f7d44a';
-            ctx.lineWidth = 3;
+            ctx.shadowColor = 'rgba(255, 215, 0, 0.6)';
+            ctx.shadowBlur = 10;
+            ctx.strokeStyle = '#fde047';
+            ctx.lineWidth = 2.5;
         } else {
-            ctx.strokeStyle = `hsla(${colorHue}, 70%, 80%, 0.55)`;
+            ctx.strokeStyle = `hsla(${colorHue}, 70%, 82%, 0.45)`;
             ctx.lineWidth = 1;
         }
-        ctx.strokeRect(b.x + 0.5, sy + 0.5, w - 1, BLOCK_H - 1);
+        roundRect(b.x + 0.5, curY + 0.5, w - 1, curH - 1, 3);
+        ctx.stroke();
+
         ctx.restore();
     }
 
@@ -1520,13 +1803,68 @@
             drawBlock(b, sy, i, b === currentTopBlock);
         }
 
+        // Falling sliced block debris with 3D rotation and fade
+        for (const s of fallingSlices) {
+            const ssy = s.y - cameraYOffset;
+            if (ssy < -60 || ssy > CH + 60) continue;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, s.life);
+            ctx.translate(s.x + s.width / 2, ssy + s.height / 2);
+            ctx.rotate(s.rot);
+
+            const halfW = s.width / 2;
+            const halfH = s.height / 2;
+            const g = ctx.createLinearGradient(-halfW, -halfH, -halfW, halfH);
+            g.addColorStop(0, `hsl(${s.hue}, 70%, 65%)`);
+            g.addColorStop(1, `hsl(${s.hue}, 45%, 28%)`);
+            ctx.fillStyle = g;
+            roundRect(-halfW, -halfH, s.width, s.height, 2.5);
+            ctx.fill();
+
+            // Specular gloss strip
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+            roundRect(-halfW + 1, -halfH + 1, Math.max(1, s.width - 2), 2.5, 1);
+            ctx.fill();
+
+            ctx.strokeStyle = `hsla(${s.hue}, 65%, 80%, 0.45)`;
+            ctx.lineWidth = 1;
+            roundRect(-halfW, -halfH, s.width, s.height, 2.5);
+            ctx.stroke();
+
+            ctx.restore();
+        }
+
+        // Radiant shockwaves on Perfect hits
+        for (const sw of shockwaves) {
+            const swy = sw.y - cameraYOffset;
+            if (swy < -80 || swy > CH + 80) continue;
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, sw.alpha);
+
+            // Outer ring
+            ctx.strokeStyle = `rgba(${sw.color}, ${Math.min(1, sw.alpha)})`;
+            ctx.lineWidth = 2.4;
+            ctx.beginPath();
+            ctx.arc(sw.x, swy, sw.radius, 0, Math.PI * 2);
+            ctx.stroke();
+
+            // Inner bright core ring
+            ctx.strokeStyle = `rgba(255, 255, 255, ${Math.min(1, sw.alpha * 0.85)})`;
+            ctx.lineWidth = 1.2;
+            ctx.beginPath();
+            ctx.arc(sw.x, swy, Math.max(1, sw.radius * 0.72), 0, Math.PI * 2);
+            ctx.stroke();
+            ctx.restore();
+        }
+
         for (let i = 0; i < trailPositions.length; i++) {
             const t = trailPositions[i];
             const alpha = 0.32 - i * 0.06;
             if (alpha <= 0) continue;
             ctx.fillStyle = `rgba(255, 220, 100, ${alpha})`;
             const trailY = currentTopBlock ? currentTopBlock.y - cameraYOffset - BLOCK_H : 0;
-            ctx.fillRect(t.x, trailY, movingBlock.width, BLOCK_H);
+            roundRect(t.x, trailY, movingBlock.width, BLOCK_H, 3);
+            ctx.fill();
         }
 
         if (gameRunning && currentTopBlock) {
@@ -1536,17 +1874,39 @@
                 if (slowmoBlocksLeft > 0) { glowColor = '#44ddff'; fillHue = colorHue + 30; }
                 else if (doubleBlocksLeft > 0) { glowColor = '#ff6b6b'; fillHue = colorHue - 10; }
                 else if (precisionBlocksLeft > 0) { glowColor = '#ffb347'; fillHue = colorHue + 5; }
+
                 ctx.save();
-                ctx.shadowBlur = 14;
+                ctx.shadowBlur = 15;
                 ctx.shadowColor = glowColor;
-                ctx.fillStyle = `hsl(${fillHue}, 90%, 65%)`;
-                ctx.fillRect(movingBlock.x, mbY, movingBlock.width, BLOCK_H);
+
+                // 3D vertical gradient
+                const mg = ctx.createLinearGradient(movingBlock.x, mbY, movingBlock.x, mbY + BLOCK_H);
+                mg.addColorStop(0, `hsl(${fillHue}, 95%, 72%)`);
+                mg.addColorStop(0.3, `hsl(${fillHue}, 90%, 62%)`);
+                mg.addColorStop(1, `hsl(${fillHue}, 85%, 44%)`);
+                ctx.fillStyle = mg;
+                roundRect(movingBlock.x, mbY, movingBlock.width, BLOCK_H, 3);
+                ctx.fill();
+
                 ctx.shadowBlur = 0;
-                ctx.fillStyle = 'rgba(255,251,208,0.85)';
-                ctx.fillRect(movingBlock.x + 2, mbY, movingBlock.width - 4, 5);
-                ctx.strokeStyle = '#ffffbb';
-                ctx.lineWidth = 2;
-                ctx.strokeRect(movingBlock.x, mbY, movingBlock.width, BLOCK_H);
+
+                // Top glossy specular bar
+                ctx.fillStyle = 'rgba(255, 255, 230, 0.75)';
+                roundRect(movingBlock.x + 2, mbY + 1, Math.max(2, movingBlock.width - 4), 4, 1.5);
+                ctx.fill();
+
+                // Left edge highlight & right edge shadow
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+                ctx.fillRect(movingBlock.x + 0.5, mbY + 2, 2, BLOCK_H - 4);
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+                ctx.fillRect(movingBlock.x + movingBlock.width - 2.5, mbY + 2, 2, BLOCK_H - 4);
+
+                // Bright border stroke
+                ctx.strokeStyle = '#ffffdd';
+                ctx.lineWidth = 1.6;
+                roundRect(movingBlock.x + 0.5, mbY + 0.5, movingBlock.width - 1, BLOCK_H - 1, 3);
+                ctx.stroke();
+
                 ctx.restore();
             }
         }
@@ -1555,19 +1915,89 @@
             const csy = crystal.y - cameraYOffset + Math.sin(frameCount * 0.1) * 3;
             if (csy > -30 && csy < CH + 30) {
                 const col = (CRYSTAL_TYPES[crystal.type] || CRYSTAL_TYPES.slowmo).color;
+                const cx = crystal.x + 8;
+                const cy = csy + 9;
                 ctx.save();
-                ctx.shadowBlur = 10;
+
+                // Outer pulsing aura halo ring
+                const auraPulse = 14 + Math.sin(frameCount * 0.12) * 3;
+                ctx.strokeStyle = col;
+                ctx.globalAlpha = 0.35 + Math.sin(frameCount * 0.12) * 0.15;
+                ctx.lineWidth = 1.5;
+                ctx.beginPath();
+                ctx.arc(cx, cy, auraPulse, 0, Math.PI * 2);
+                ctx.stroke();
+
+                // Orbiting sparkle starlets
+                const orbAngle = frameCount * 0.08;
+                const ox1 = cx + Math.cos(orbAngle) * 13;
+                const oy1 = cy + Math.sin(orbAngle) * 6;
+                const ox2 = cx - Math.cos(orbAngle) * 13;
+                const oy2 = cy - Math.sin(orbAngle) * 6;
+                ctx.fillStyle = '#ffffff';
+                ctx.globalAlpha = 0.8;
+                ctx.beginPath(); ctx.arc(ox1, oy1, 1.3, 0, Math.PI * 2); ctx.fill();
+                ctx.beginPath(); ctx.arc(ox2, oy2, 1.3, 0, Math.PI * 2); ctx.fill();
+
+                // 3D Diamond faceting
+                ctx.globalAlpha = 1;
+                ctx.shadowBlur = 12;
                 ctx.shadowColor = col;
+
+                // Top-left facet (bright highlight)
+                ctx.fillStyle = 'rgba(255, 255, 255, 0.9)';
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - 10);
+                ctx.lineTo(cx - 8, cy);
+                ctx.lineTo(cx, cy);
+                ctx.closePath();
+                ctx.fill();
+
+                // Top-right facet (main bright color)
                 ctx.fillStyle = col;
                 ctx.beginPath();
-                ctx.moveTo(crystal.x + 8, csy);
-                ctx.lineTo(crystal.x + 16, csy + 10);
-                ctx.lineTo(crystal.x + 8, csy + 18);
-                ctx.lineTo(crystal.x, csy + 10);
+                ctx.moveTo(cx, cy - 10);
+                ctx.lineTo(cx + 8, cy);
+                ctx.lineTo(cx, cy);
+                ctx.closePath();
                 ctx.fill();
+
+                // Bottom-left facet (shaded main color)
+                ctx.fillStyle = col;
+                ctx.beginPath();
+                ctx.moveTo(cx - 8, cy);
+                ctx.lineTo(cx, cy + 10);
+                ctx.lineTo(cx, cy);
+                ctx.closePath();
+                ctx.fill();
+
+                // Bottom-right facet (darker shaded)
+                ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+                ctx.beginPath();
+                ctx.moveTo(cx + 8, cy);
+                ctx.lineTo(cx, cy + 10);
+                ctx.lineTo(cx, cy);
+                ctx.closePath();
+                ctx.fill();
+
+                // Diamond outline
                 ctx.shadowBlur = 0;
-                ctx.fillStyle = 'white';
-                ctx.fillRect(crystal.x + 6, csy + 6, 4, 7);
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 1.2;
+                ctx.beginPath();
+                ctx.moveTo(cx, cy - 10);
+                ctx.lineTo(cx + 8, cy);
+                ctx.lineTo(cx, cy + 10);
+                ctx.lineTo(cx - 8, cy);
+                ctx.closePath();
+                ctx.stroke();
+
+                // Center specular glint
+                ctx.fillStyle = '#ffffff';
+                ctx.beginPath();
+                ctx.arc(cx - 1, cy - 2, 1.6, 0, Math.PI * 2);
+                ctx.fill();
+
                 ctx.restore();
             }
         }
@@ -1589,10 +2019,29 @@
             ctx.save();
             ctx.globalAlpha = Math.max(0, p.life);
             ctx.translate(p.x, p.y - cameraYOffset);
-            ctx.rotate(p.rot || 0);
-            ctx.fillStyle = p.color;
-            const s = p.size || 3;
-            ctx.fillRect(-s / 2, -s / 2, s, s);
+            if (p.isConfetti) {
+                // 3D tumbling paper ribbons
+                ctx.rotate(p.rotZ || 0);
+                ctx.scale(Math.cos(p.rotX || 0), Math.sin(p.rotY || 0));
+                ctx.fillStyle = p.color;
+                ctx.fillRect(-p.w / 2, -p.h / 2, p.w, p.h);
+            } else {
+                ctx.rotate(p.rot || 0);
+                ctx.fillStyle = p.color;
+                const s = p.size || 3;
+                ctx.beginPath();
+                ctx.arc(0, 0, s, 0, Math.PI * 2);
+                ctx.fill();
+
+                if (p.sparkle) {
+                    ctx.strokeStyle = '#ffffff';
+                    ctx.lineWidth = 0.8;
+                    ctx.beginPath();
+                    ctx.moveTo(-s * 1.5, 0); ctx.lineTo(s * 1.5, 0);
+                    ctx.moveTo(0, -s * 1.5); ctx.lineTo(0, s * 1.5);
+                    ctx.stroke();
+                }
+            }
             ctx.restore();
         }
 
@@ -1698,17 +2147,25 @@
         const target = forceState !== undefined ? forceState : !isPaused;
         if (isPaused === target) return;
         isPaused = target;
+        if (!isPaused) {
+            lastFrameTime = performance.now();
+        }
     }
 
-    function gameLoop() {
+    function gameLoop(now) {
+        if (!now) now = performance.now();
+        const deltaMs = now - lastFrameTime;
+        lastFrameTime = now;
+        const dt = Math.min(2.5, Math.max(0.1, deltaMs / 16.667));
+
         frameCount++;
         if (gameRunning && !isPaused) {
-            updateMoving();
-            updateCamera();
+            updateMoving(dt);
+            updateCamera(dt);
             checkCrystalCollision();
-            updateParticlesAndTexts();
-            updateBackground();
-            displayedScore += (currentScore - displayedScore) * 0.25;
+            updateParticlesAndTexts(dt);
+            updateBackground(dt);
+            displayedScore += (currentScore - displayedScore) * Math.min(1, 0.25 * dt);
             if (Math.abs(currentScore - displayedScore) < 0.5) displayedScore = currentScore;
             scoreElem.innerText = Math.round(displayedScore);
         }
