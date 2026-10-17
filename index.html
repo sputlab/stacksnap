@@ -4,6 +4,25 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
 <title>StackSnap · Arcade Plus</title>
+<meta name="description" content="Addictive arcade stacking game with procedural Web Audio synthesis, combo multipliers, crystals, and a global leaderboard. How high can you stack?">
+<meta name="theme-color" content="#0b0f1c">
+
+<!-- PWA & Mobile Web App -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="StackSnap">
+<link rel="manifest" href="manifest.json">
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230b0f1c'/%3E%3Crect x='15' y='64' width='70' height='16' rx='4' fill='%23ffb454' stroke='%23ffdf9c' stroke-width='2'/%3E%3Crect x='22' y='44' width='56' height='16' rx='4' fill='%235eead4' stroke='%239dff6b' stroke-width='2'/%3E%3Crect x='30' y='24' width='40' height='16' rx='4' fill='%23ff8a8a' stroke='%23ffe27a' stroke-width='2'/%3E%3C/svg%3E">
+
+<!-- Open Graph & Social Cards -->
+<meta property="og:type" content="website">
+<meta property="og:title" content="StackSnap · Arcade Plus">
+<meta property="og:description" content="Stack moving blocks, time your perfect drop, collect power-up crystals, and compete on the global leaderboard!">
+<meta property="og:url" content="https://sputlab.com">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="StackSnap · Arcade Plus">
+<meta name="twitter:description" content="Stack moving blocks, time your perfect drop, collect power-up crystals, and compete on the global leaderboard!">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=Poppins:ital,wght@0,400;0,500;0,600;0,700;0,800;1,600&display=swap" rel="stylesheet">
@@ -562,12 +581,10 @@
                 <button class="lb-switch-btn" id="lbGlobalBtn">🌍 Global</button>
             </div>
             <ul id="overlayHighscoreList" class="highscore-list"></ul>
-            <div id="overlayNameEntry">
-                <div class="score-recap" id="scoreRecap"></div>
-                <div class="name-input-area">
-                    <input type="text" id="overlayPlayerName" maxlength="16" placeholder="Your name">
-                    <button id="overlaySaveBtn">SAVE</button>
-                </div>
+            <div class="score-recap" id="scoreRecap"></div>
+            <div id="overlayNameEntry" class="name-input-area">
+                <input type="text" id="overlayPlayerName" maxlength="16" placeholder="Your name">
+                <button id="overlaySaveBtn">SAVE</button>
             </div>
             <button class="restart-big" id="restartButtonOverlay">⟳ PLAY AGAIN</button>
         </div>
@@ -599,7 +616,7 @@
         <div class="modal-version" id="modalVersion"></div>
         <div class="tab-content" id="tabGuide">
             <p><strong>Goal:</strong> stack as many blocks as possible, centering the block that slides back and forth each time. The higher you climb, the faster the game gets and the scene turns to night: how high can you get?</p>
-            <p><strong>🎮 Controls:</strong> tap the screen, click with the mouse, or press the <strong>space bar</strong> to drop the block — all three work, pick whichever feels best. Press <strong>R</strong> at any time to restart instantly.</p>
+            <p><strong>🎮 Controls:</strong> tap the screen, click with the mouse, or press the <strong>space bar</strong> to drop the block. Press <strong>P</strong> or <strong>Esc</strong> to pause/resume. Press <strong>R</strong> at any time to restart instantly.</p>
             <p><strong>Bonuses and power-ups:</strong></p>
             <ul>
                 <li>🎯 <strong>Perfect:</strong> land exactly on the block below: 40 points total and extends your streak.</li>
@@ -638,7 +655,7 @@
         <div class="modal-version" id="splashVersion"></div>
         <p>Stack the blocks that slide back and forth, centering them as closely as you can. The higher you climb, the faster the game gets and the scene turns to night!</p>
         <ul>
-            <li>🎮 Tap the screen, click, or press <strong>Space</strong> to drop the block.</li>
+            <li>🎮 Tap the screen, click, or press <strong>Space</strong> to drop the block (press <strong>P</strong> or <strong>Esc</strong> to pause).</li>
             <li>🎯 A <strong>Perfect</strong> hit is worth 40 points and extends your streak.</li>
             <li>🔥 3 Perfects in a row activate the <strong>x2</strong> multiplier for the next 3 blocks.</li>
             <li>💎 Bonus crystals (last for the next 3 blocks): <strong style="color:#8effff;">blue</strong> slows the block, <strong style="color:#ffb347;">orange</strong> forgives a gap of up to 10%, <strong style="color:#ff6b6b;">red</strong> doubles your points.</li>
@@ -688,6 +705,9 @@
     const CHANGELOG = [
         { v: '2.6.0', notes: [
             'The whole app is now in English — every screen, menu, and message',
+            'Added pause feature: press P or Esc, or tap to resume; auto-pauses when opening menus or switching browser tabs',
+            'Added PWA support (Add to Home Screen), SVG favicon, and Open Graph social sharing cards',
+            'Fixed leaderboard rank confirmation display and added double-submission protection',
             'Donation link updated to point to sputlab.com/donazioni and the "(PayPal)" label was dropped from the support menu item',
             'Fixed a bug reported by Giangio: after using the orange Precision crystal, a "forgiven" Perfect hit still shrank the block to the actual overlap width — after 3 hits in a row the platform got silently narrower while speed kept ramping up as normal, which felt like the block had "gone haywire". A Perfect hit (forgiven or not) now always keeps the block at full width, perfectly aligned',
             'Thanks again to <b>Giangio</b> for spotting this one! 🙌'
@@ -746,6 +766,8 @@
 
     // ================= STATO GIOCO =================
     let gameRunning = true;
+    let isPaused = false;
+    let isSavingScore = false;
     let currentScore = 0;
     let displayedScore = 0;
     let bestScore = 0;
@@ -1161,6 +1183,8 @@
     // ================= RESET / FINE PARTITA =================
     function initGame() {
         gameRunning = true;
+        isPaused = false;
+        isSavingScore = false;
         processingTap = false;
         currentScore = 0;
         displayedScore = 0;
@@ -1639,6 +1663,24 @@
 
         ctx.restore();
 
+        if (isPaused && gameRunning) {
+            ctx.save();
+            ctx.fillStyle = 'rgba(3,5,10,0.68)';
+            ctx.fillRect(0, 0, CW, CH);
+            ctx.textAlign = 'center';
+            ctx.font = '800 28px "Poppins", sans-serif';
+            ctx.fillStyle = '#ffdf9c';
+            ctx.shadowBlur = 10;
+            ctx.shadowColor = 'rgba(255,180,84,0.5)';
+            ctx.fillText('⏸️ PAUSED', CW / 2, CH / 2 - 20);
+            ctx.shadowBlur = 0;
+            ctx.font = '600 13px "Poppins", sans-serif';
+            ctx.fillStyle = '#cdd9ff';
+            ctx.fillText('Press P, Space, or tap to resume', CW / 2, CH / 2 + 18);
+            ctx.textAlign = 'left';
+            ctx.restore();
+        }
+
         if (gameRunning) {
             ctx.font = 'bold 12px monospace';
             ctx.textAlign = 'right';
@@ -1651,27 +1693,37 @@
     }
 
     // ================= LOOP =================
+    function togglePause(forceState) {
+        if (!gameRunning) return;
+        const target = forceState !== undefined ? forceState : !isPaused;
+        if (isPaused === target) return;
+        isPaused = target;
+    }
+
     function gameLoop() {
         frameCount++;
-        if (gameRunning) {
+        if (gameRunning && !isPaused) {
             updateMoving();
             updateCamera();
             checkCrystalCollision();
+            updateParticlesAndTexts();
+            updateBackground();
+            displayedScore += (currentScore - displayedScore) * 0.25;
+            if (Math.abs(currentScore - displayedScore) < 0.5) displayedScore = currentScore;
+            scoreElem.innerText = Math.round(displayedScore);
         }
-        updateParticlesAndTexts();
-        updateBackground();
         draw();
-
-        displayedScore += (currentScore - displayedScore) * 0.25;
-        if (Math.abs(currentScore - displayedScore) < 0.5) displayedScore = currentScore;
-        scoreElem.innerText = Math.round(displayedScore);
-
         requestAnimationFrame(gameLoop);
     }
 
     // ================= INPUT =================
     function onTap(e) {
         if (!gameRunning) return;
+        if (isPaused) {
+            e.preventDefault();
+            togglePause(false);
+            return;
+        }
         e.preventDefault();
         ensureAudio();
         performStack();
@@ -1681,8 +1733,17 @@
         canvas.addEventListener('mousedown', onTap);
         canvas.addEventListener('touchstart', onTap, { passive: false });
         window.addEventListener('keydown', (e) => {
+            if ((e.code === 'KeyP' || e.code === 'Escape') && gameRunning) {
+                e.preventDefault();
+                togglePause();
+                return;
+            }
             if (e.code === 'Space' && gameRunning) {
                 e.preventDefault();
+                if (isPaused) {
+                    togglePause(false);
+                    return;
+                }
                 ensureAudio();
                 performStack();
             }
@@ -1690,6 +1751,12 @@
                 e.preventDefault();
                 restartGame();
             }
+        });
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden && gameRunning) togglePause(true);
+        });
+        window.addEventListener('blur', () => {
+            if (gameRunning) togglePause(true);
         });
     }
 
@@ -1707,13 +1774,19 @@
         leaderboardMode = 'local';
         document.getElementById('lbLocalBtn').classList.add('active');
         document.getElementById('lbGlobalBtn').classList.remove('active');
+        const recap = document.getElementById('scoreRecap');
         if (currentScore > 0 && !scoreSaved && pendingScore === currentScore) {
-            overlayNameEntry.style.display = 'block';
+            overlayNameEntry.style.display = 'flex';
+            if (recap) recap.style.display = 'block';
             const savedName = localStorage.getItem('stacksnap_nickname');
             if (savedName) overlayPlayerName.value = savedName;
             updateScoreRecapPreview();
+        } else if (scoreSaved && recap) {
+            overlayNameEntry.style.display = 'none';
+            recap.style.display = 'block';
         } else {
             overlayNameEntry.style.display = 'none';
+            if (recap) recap.style.display = 'none';
         }
         renderOverlayList();
         // Carica la classifica globale in background per la stima della posizione e per lo switch Globale
@@ -1724,6 +1797,8 @@
     }
     function hideHighscoreOverlay() { highscoreOverlay.classList.add('hide-overlay'); }
     async function saveCurrentScoreWithName() {
+        if (isSavingScore || scoreSaved) return;
+        isSavingScore = true;
         let name = overlayPlayerName.value.trim();
         if (name === "") name = "Anonymous";
         localStorage.setItem('stacksnap_nickname', name);
@@ -1737,10 +1812,12 @@
         overlayNameEntry.style.display = 'none';
         const recap = document.getElementById('scoreRecap');
         if (result && result.ok && typeof result.rank === 'number') {
-            recap.innerHTML = `Score: <b>${pendingScore}</b> · You're <b>#${result.rank}</b> on the global leaderboard!`;
+            recap.innerHTML = `Score: <b>${pendingScore}</b> · You're <b>#${result.rank}</b> on the global leaderboard! 🎉`;
         } else if (recap) {
             recap.innerHTML = `Score: <b>${pendingScore}</b> · <span style="opacity:0.7;">couldn't submit to the global leaderboard</span>`;
         }
+        if (recap) recap.style.display = 'block';
+        isSavingScore = false;
         renderOverlayList();
     }
 
@@ -1774,11 +1851,13 @@
     function dismissSplash() {
         if (hideSplashCheckbox.checked) localStorage.setItem('stacksnap_hide_splash', '1');
         splashModal.style.display = 'none';
+        togglePause(false);
     }
     function showSplashScreen() {
         document.getElementById('splashVersion').textContent = `v${APP_VERSION}`;
         hideSplashCheckbox.checked = false;
         splashModal.style.display = 'flex';
+        if (gameRunning) togglePause(true);
     }
     function maybeShowSplash() {
         if (localStorage.getItem('stacksnap_hide_splash') !== '1') showSplashScreen();
@@ -1786,7 +1865,11 @@
     document.getElementById('splashStartBtn').addEventListener('click', dismissSplash);
     window.addEventListener('click', (e) => { if (e.target === splashModal) dismissSplash(); });
 
-    function toggleMenu() { menuPanel.style.display = menuPanel.style.display === 'flex' ? 'none' : 'flex'; }
+    function toggleMenu() {
+        const willOpen = menuPanel.style.display !== 'flex';
+        menuPanel.style.display = willOpen ? 'flex' : 'none';
+        if (willOpen && gameRunning) togglePause(true);
+    }
     burgerIcon.addEventListener('click', toggleMenu);
     closeMenuBtn.addEventListener('click', () => menuPanel.style.display = 'none');
 
@@ -1828,13 +1911,14 @@
 
     function closeAllModals() { ALL_MODALS.forEach(m => m.style.display = 'none'); }
 
-    guideBtn.addEventListener('click', () => { menuPanel.style.display = 'none'; closeAllModals(); guideModal.style.display = 'flex'; });
-    changelogBtn.addEventListener('click', () => { menuPanel.style.display = 'none'; closeAllModals(); changelogModal.style.display = 'flex'; });
-    statsBtn.addEventListener('click', () => { menuPanel.style.display = 'none'; closeAllModals(); renderStatsAndAchievements(); statsModal.style.display = 'flex'; });
+    guideBtn.addEventListener('click', () => { menuPanel.style.display = 'none'; closeAllModals(); guideModal.style.display = 'flex'; if (gameRunning) togglePause(true); });
+    changelogBtn.addEventListener('click', () => { menuPanel.style.display = 'none'; closeAllModals(); changelogModal.style.display = 'flex'; if (gameRunning) togglePause(true); });
+    statsBtn.addEventListener('click', () => { menuPanel.style.display = 'none'; closeAllModals(); renderStatsAndAchievements(); statsModal.style.display = 'flex'; if (gameRunning) togglePause(true); });
     globalBtn.addEventListener('click', async () => {
         menuPanel.style.display = 'none';
         closeAllModals();
         globalModal.style.display = 'flex';
+        if (gameRunning) togglePause(true);
         await renderGlobalModalList();
     });
 

@@ -23,6 +23,9 @@ if (!file_exists(__DIR__ . '/../config.php')) {
 require_once __DIR__ . '/../config.php';
 stacksnap_cors_and_json();
 
+// Lightweight HTTP caching (5 seconds fresh, 15 seconds stale-while-revalidate)
+header('Cache-Control: public, max-age=5, stale-while-revalidate=15');
+
 if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
     http_response_code(405);
     echo json_encode(['ok' => false, 'error' => 'Metodo non consentito']);
@@ -32,16 +35,11 @@ if ($_SERVER['REQUEST_METHOD'] !== 'GET') {
 try {
     $pdo = stacksnap_db();
 
-    // Dense rank computed server-side, compatible with all MySQL versions (5.7+ / 8.0+)
+    // Fast indexed query: scores pre-sorted descending, ties sorted chronologically
     $sql = '
-        SELECT
-            s.nickname,
-            s.score,
-            s.blocks,
-            s.created_at,
-            (SELECT COUNT(DISTINCT s2.score) FROM stacksnap_scores s2 WHERE s2.score > s.score) + 1 AS `rank`
-        FROM stacksnap_scores s
-        ORDER BY s.score DESC, s.created_at ASC
+        SELECT nickname, score, blocks, created_at
+        FROM stacksnap_scores
+        ORDER BY score DESC, created_at ASC
     ';
 
     if (isset($_GET['limit']) && is_numeric($_GET['limit']) && (int)$_GET['limit'] > 0) {
@@ -50,14 +48,26 @@ try {
 
     $rows = $pdo->query($sql)->fetchAll();
 
-    $out = array_map(function ($r) {
-        return [
+    // Compute dense rank in a single O(N) pass in PHP:
+    // Identical scores get the same rank; subsequent lower scores increment rank by 1 without gaps.
+    $out = [];
+    $currentRank = 0;
+    $prevScore = null;
+
+    foreach ($rows as $r) {
+        $score = (int) $r['score'];
+        if ($prevScore === null || $score < $prevScore) {
+            $currentRank++;
+            $prevScore = $score;
+        }
+
+        $out[] = [
             'nickname' => $r['nickname'],
-            'score' => (int) $r['score'],
+            'score' => $score,
             'blocks' => (int) $r['blocks'],
-            'rank' => (int) $r['rank'],
+            'rank' => $currentRank,
         ];
-    }, $rows);
+    }
 
     echo json_encode($out);
 } catch (Throwable $e) {

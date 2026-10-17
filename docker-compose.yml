@@ -1,0 +1,43 @@
+services:
+  web:
+    image: php:8.2-apache
+    container_name: stacksnap-web
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./:/var/www/html/
+    environment:
+      DB_HOST: db
+      DB_NAME: stacksnap_db
+      DB_USER: stacksnap_user
+      DB_PASS: secret123
+      ALLOWED_ORIGIN: "*"
+    command: >
+      bash -c "docker-php-ext-install pdo pdo_mysql && apache2-foreground"
+    depends_on:
+      db:
+        condition: service_healthy
+
+  db:
+    image: mariadb:10.11
+    container_name: stacksnap-db
+    restart: unless-stopped
+    environment:
+      MYSQL_ROOT_PASSWORD: rootsecret
+      MYSQL_DATABASE: stacksnap_db
+      MYSQL_USER: stacksnap_user
+      MYSQL_PASSWORD: secret123
+    volumes:
+      - ./db_setup.sql:/docker-entrypoint-initdb.d/01_init.sql:ro
+      - stacksnap_db_data:/var/lib/mysql
+    ports:
+      - "3306:3306"
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost", "-u", "root", "-prootsecret"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+volumes:
+  stacksnap_db_data:

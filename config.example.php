@@ -13,7 +13,7 @@ $dbName = getenv('DB_NAME') ?: 'stacksnap_db';
 $dbUser = getenv('DB_USER') ?: 'root';
 $dbPass = getenv('DB_PASS') ?: '';
 
-// Allowed CORS origins ('*' for all origins, or e.g. 'https://yourdomain.com')
+// Allowed CORS origin(s): '*' for all, or comma-separated list (e.g. 'https://sputlab.com, http://localhost:8000')
 $allowedOrigin = getenv('ALLOWED_ORIGIN') ?: '*';
 
 if (!defined('DB_HOST')) define('DB_HOST', $dbHost);
@@ -35,11 +35,29 @@ function stacksnap_db(): PDO {
 }
 
 function stacksnap_cors_and_json(): void {
-    header('Access-Control-Allow-Origin: ' . ALLOWED_ORIGIN);
+    $origin = $_SERVER['HTTP_ORIGIN'] ?? '';
+    $allowed = defined('ALLOWED_ORIGIN') ? ALLOWED_ORIGIN : '*';
+
+    if ($allowed === '*') {
+        header('Access-Control-Allow-Origin: *');
+    } else {
+        $allowedList = array_map('trim', explode(',', $allowed));
+        if (in_array($origin, $allowedList, true)) {
+            header('Access-Control-Allow-Origin: ' . $origin);
+            header('Vary: Origin');
+        } elseif (!empty($allowedList)) {
+            header('Access-Control-Allow-Origin: ' . $allowedList[0]);
+        }
+    }
+
     header('Access-Control-Allow-Methods: GET, POST, OPTIONS');
     header('Access-Control-Allow-Headers: Content-Type');
+    header('X-Content-Type-Options: nosniff');
+    header('X-Frame-Options: SAMEORIGIN');
+    header('Referrer-Policy: strict-origin-when-cross-origin');
     header('Content-Type: application/json; charset=utf-8');
-    if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
+
+    if (($_SERVER['REQUEST_METHOD'] ?? '') === 'OPTIONS') {
         http_response_code(204);
         exit;
     }

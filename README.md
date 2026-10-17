@@ -1,7 +1,9 @@
 # 🧱 StackSnap · Arcade Plus
 
+[![CI](https://github.com/sputlab/stacksnap/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
 [![Version](https://img.shields.io/badge/version-2.6.0-blue.svg)](index.html)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
+[![PWA Ready](https://img.shields.io/badge/PWA-installable-orange.svg)](manifest.json)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](#architecture--tech-stack)
 [![PHP](https://img.shields.io/badge/backend-PHP%20PDO%20%7C%20MySQL-8892BF.svg)](api/)
 
@@ -19,6 +21,7 @@
   - **Perfect Zone**: A high-stakes target appears every 10 blocks granting **x3 points**.
   - **Safety Net**: Built-in rescue system automatically recovers a critically thin block once per game.
   - **Milestone Celebrations**: Every 25 blocks triggers celebratory confetti, fanfare melodies, and camera shake.
+  - **Pause & Resume**: Press `P`, `Esc`, or tap the screen to pause and resume at any time. Automatically pauses when opening menus or switching browser tabs.
 
 - **💎 Power-Up Crystals**:
   - 🐢 **Blue (Slowmo)**: Slows sliding block speed by ~42% for 3 blocks.
@@ -35,14 +38,17 @@
   - Smooth day-to-night sky gradient transitioning as the tower ascends.
   - Particle sparks, floating score popups, and milestone confetti.
 
-- **📱 Fully Responsive & Zero-Build**:
+- **📱 Fully Responsive, PWA & Zero-Build**:
   - Pure Vanilla JavaScript and CSS glassmorphism.
   - Adapts to desktop monitors, tablets, and small mobile screens (e.g. iPhone 12 mini).
-  - Multi-input controls: Mouse click, screen tap, or Keyboard (`Space` to drop, `R` to restart).
+  - **PWA Ready**: Tap "Add to Home Screen" on iOS and Android to play in standalone full-screen mode.
+  - Multi-input controls: Mouse click, screen tap, or Keyboard (`Space` to drop, `P`/`Esc` to pause, `R` to restart).
 
 - **🏆 Dual Leaderboards & Persistence**:
   - **Local Leaderboard**: Offline storage in `localStorage` for high scores.
   - **Global Leaderboard**: Shared backend powered by PHP PDO and MySQL with server-side dense ranking (tied scores share the same rank).
+  - **Performance Optimized**: $O(N)$ dense rank calculation with HTTP caching (`Cache-Control: public, max-age=5, stale-while-revalidate=15`).
+  - **Anti-Cheat Validation**: Mathematical score-to-blocks plausibility verification and IP cooldown rate limiting.
   - **Player Stats & 12 Achievements**: In-depth statistics tracking games played, total blocks, best streaks, play time, and unlocked badges.
 
 ---
@@ -55,6 +61,7 @@
                           │                                      │
                           │  • HTML5 Canvas 2D (Dynamic DPR)     │
                           │  • Web Audio API Synthesizer         │
+                          │  • PWA Manifest & Service Ready      │
                           │  • LocalStorage (Stats/Achievements) │
                           └──────────────────┬───────────────────┘
                                              │ HTTP REST (JSON)
@@ -62,8 +69,8 @@
                           ┌──────────────────────────────────────┐
                           │         Backend (PHP PDO)            │
                           │                                      │
-                          │  • api/get_leaderboard.php           │
-                          │  • api/submit_score.php              │
+                          │  • api/get_leaderboard.php (O(N))    │
+                          │  • api/submit_score.php (Anti-Cheat) │
                           │  • config.php (CORS & DB Connection) │
                           └──────────────────┬───────────────────┘
                                              │ SQL
@@ -72,7 +79,7 @@
                           │         MySQL Database               │
                           │                                      │
                           │  • Table: stacksnap_scores           │
-                          │  • Dense Rank Server Calculation     │
+                          │  • Composite Index (score, created)  │
                           └──────────────────────────────────────┘
 ```
 
@@ -81,8 +88,8 @@
 | **Frontend** | HTML5, CSS3, Vanilla JS | Zero-build, self-contained single-page arcade game. |
 | **Graphics** | HTML5 Canvas 2D | Infinite vertical camera tracking, dynamic DPR scaling. |
 | **Audio** | Web Audio API | Procedural sound synthesizer (stack, combo, crystals, fanfare). |
-| **Backend API** | PHP 7.4+ / 8.x (PDO) | Lightweight JSON REST endpoints. |
-| **Database** | MySQL 5.7+ / 8.0+ | Persistent global leaderboard with indexed queries. |
+| **Backend API** | PHP 7.4+ / 8.x (PDO) | Lightweight JSON REST endpoints with caching and anti-cheat. |
+| **Database** | MySQL 5.7+ / 8.0+ / MariaDB | Persistent global leaderboard with composite index. |
 
 ---
 
@@ -90,19 +97,24 @@
 
 ```
 stacksnap/
+├── .github/
+│   └── workflows/
+│       └── ci.yml             # Automated GitHub Actions workflow
 ├── .gitattributes             # Line ending normalization
-├── .gitignore                  # Protects credentials and ignores system files
-├── LICENSE                     # MIT Open Source License
-├── README.md                   # Project documentation
-├── index.html                  # Standalone game entry point (HTML, CSS, JS engine)
-├── config.example.php          # Database configuration template (safe for Git)
-├── config.php                  # Local database configuration (ignored by Git)
-├── db_setup.sql                # MySQL database schema setup script
-├── api/                        # Backend REST endpoints
-│   ├── get_leaderboard.php     # Endpoint: Fetch dense-ranked global scores
-│   └── submit_score.php        # Endpoint: Validate and submit a new score
+├── .gitignore                 # Protects config.php, old/, and OS artifacts
+├── docker-compose.yml         # 1-command local fullstack environment
+├── LICENSE                    # MIT Open Source License
+├── manifest.json              # PWA Web App Manifest
+├── README.md                  # Project documentation & API reference
+├── index.html                 # Game client (HTML, CSS, JS engine)
+├── config.example.php         # Safe database configuration template for Git
+├── config.php                 # Local credentials file (ignored by Git)
+├── db_setup.sql               # MySQL database schema setup script
+├── api/                       # Backend REST endpoints
+│   ├── get_leaderboard.php    # Endpoint: Fetch dense-ranked global scores
+│   └── submit_score.php       # Endpoint: Validate and submit a new score
 └── docs/
-    └── LEADERBOARD_SETUP_IT.md # Original Italian setup guide
+    └── LEADERBOARD_SETUP_IT.md# Italian backend setup guide
 ```
 
 ---
@@ -115,13 +127,25 @@ StackSnap works out-of-the-box as a standalone client without any server:
 
 1. Clone or download the repository.
 2. Open `index.html` directly in any web browser.
-3. Enjoy! The game will track local highscores, player statistics, and achievements in your browser's `localStorage`.
+3. Enjoy! The game tracks local highscores, player statistics, and achievements in your browser's `localStorage`.
 
 ---
 
-### Option 2: Fullstack Deployment (With Global Leaderboard)
+### Option 2: Fullstack with Docker (One-Command Setup)
 
-To enable the shared Global Leaderboard:
+If you have [Docker](https://www.docker.com/) installed, launch the entire stack (PHP 8.2 + Apache + MariaDB) with one command:
+
+```bash
+docker compose up -d
+```
+
+Open `http://localhost:8080` in your browser. The database and tables are created automatically!
+
+---
+
+### Option 3: Fullstack on Shared / Traditional Hosting
+
+To connect the game to your existing MySQL hosting:
 
 #### 1. Setup the Database
 
@@ -148,7 +172,7 @@ define('DB_HOST', 'localhost');
 define('DB_NAME', 'your_database_name');
 define('DB_USER', 'your_mysql_username');
 define('DB_PASS', 'your_mysql_password');
-define('ALLOWED_ORIGIN', '*'); // Or restrict to 'https://yourdomain.com'
+define('ALLOWED_ORIGIN', '*'); // Or comma-separated: 'https://yourdomain.com, http://localhost:8080'
 ```
 
 > **Security Note:** `config.php` is listed in `.gitignore` so your database credentials will never be committed or pushed to GitHub.
@@ -172,10 +196,13 @@ define('ALLOWED_ORIGIN', '*'); // Or restrict to 'https://yourdomain.com'
 
 ### 1. `GET /api/get_leaderboard.php`
 
-Returns all global scores ordered from highest to lowest with dense ranking (tied scores share the same rank).
+Returns global scores ordered from highest to lowest with $O(N)$ server-side dense ranking (tied scores share the same rank).
 
 - **Query Parameters**:
   - `limit` *(optional, integer)*: Maximum number of rows to return (e.g. `?limit=100`).
+
+- **Response Headers**:
+  - `Cache-Control: public, max-age=5, stale-while-revalidate=15`
 
 - **Response `(200 OK)`**:
   ```json
@@ -199,7 +226,7 @@ Returns all global scores ordered from highest to lowest with dense ranking (tie
 
 ### 2. `POST /api/submit_score.php`
 
-Submits a new score to the global database and calculates the player's final rank.
+Submits a new score to the global database, applies anti-cheat validation, and returns the player's final rank.
 
 - **Request Headers**:
   - `Content-Type: application/json`
@@ -217,6 +244,8 @@ Submits a new score to the global database and calculates the player's final ran
   - `nickname`: Trimmed and HTML-stripped, maximum 16 characters (defaults to `"Anonymous"` if empty).
   - `score`: Non-negative integer $\le 999,999$.
   - `blocks`: Non-negative integer $\le 50,000$.
+  - **Plausibility**: Verifies that score is mathematically possible given the number of stacked blocks.
+  - **Rate Limit**: 3-second cooldown per IP to prevent automated flood scripts.
 
 - **Response `(200 OK)`**:
   ```json
@@ -233,8 +262,9 @@ Submits a new score to the global database and calculates the player's final ran
 
 | Control | Action |
 |---|---|
-| **Mouse Left Click** / **Screen Tap** | Drop sliding block onto tower |
-| **`Space` key** | Drop sliding block onto tower |
+| **Mouse Left Click** / **Screen Tap** | Drop sliding block onto tower (or resume when paused) |
+| **`Space` key** | Drop sliding block onto tower (or resume when paused) |
+| **`P` or `Esc` key** | Pause / resume game |
 | **`R` key** | Quick restart game |
 | **Header `⟳` button** | Restart game |
 | **Top-right Hamburger Menu** | Open Guide, Stats & Achievements, Global Leaderboard, Changelog, or Audio Toggle |
@@ -245,6 +275,11 @@ Submits a new score to the global database and calculates the player's final ran
 
 - **v2.6.0**:
   - Complete English localization (screens, modals, messages).
+  - Added pause feature (`P`, `Esc`, tap to resume; auto-pauses on modal open or tab switch).
+  - Added PWA mobile home screen support (`manifest.json`), SVG favicon, and Open Graph social cards.
+  - Optimized global leaderboard query to $O(N)$ with HTTP caching headers.
+  - Added anti-cheat score plausibility check and IP cooldown rate limiting.
+  - Fixed leaderboard rank confirmation message display and double-submission protection.
   - Fixed Precision crystal bug: forgiven Perfect hits now properly preserve full platform width without shrinking.
   - Updated support donation link (`sputlab.com/donate/`).
 - **v2.5.0**:
