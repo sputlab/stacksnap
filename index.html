@@ -8,20 +8,30 @@
 <meta name="theme-color" content="#0b0f1c">
 
 <!-- PWA & Mobile Web App -->
+<meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="StackSnap">
+<meta name="application-name" content="StackSnap">
+<meta name="msapplication-TileColor" content="#0b0f1c">
+<meta name="msapplication-TileImage" content="icons/icon-192.png">
+
 <link rel="manifest" href="manifest.json">
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='22' fill='%230b0f1c'/%3E%3Crect x='15' y='64' width='70' height='16' rx='4' fill='%23ffb454' stroke='%23ffdf9c' stroke-width='2'/%3E%3Crect x='22' y='44' width='56' height='16' rx='4' fill='%235eead4' stroke='%239dff6b' stroke-width='2'/%3E%3Crect x='30' y='24' width='40' height='16' rx='4' fill='%23ff8a8a' stroke='%23ffe27a' stroke-width='2'/%3E%3C/svg%3E">
+<link rel="icon" type="image/svg+xml" href="favicon.svg">
+<link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32x32.png">
+<link rel="icon" type="image/png" sizes="16x16" href="icons/favicon-16x16.png">
+<link rel="apple-touch-icon" sizes="180x180" href="icons/apple-touch-icon.png">
 
 <!-- Open Graph & Social Cards -->
 <meta property="og:type" content="website">
 <meta property="og:title" content="StackSnap · Arcade Plus">
 <meta property="og:description" content="Stack moving blocks, time your perfect drop, collect power-up crystals, and compete on the global leaderboard!">
 <meta property="og:url" content="https://sputlab.com">
+<meta property="og:image" content="icons/og-image.jpg">
 <meta name="twitter:card" content="summary_large_image">
 <meta name="twitter:title" content="StackSnap · Arcade Plus">
 <meta name="twitter:description" content="Stack moving blocks, time your perfect drop, collect power-up crystals, and compete on the global leaderboard!">
+<meta name="twitter:image" content="icons/og-image.jpg">
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -568,6 +578,7 @@
             <button class="menu-item" id="globalBtn">🌍 Global Leaderboard</button>
             <button class="menu-item" id="changelogBtn">🕓 Changelog</button>
             <button class="menu-item" id="muteBtn">🔊 Audio: ON</button>
+            <button class="menu-item" id="pwaInstallBtn" style="display: none; color: var(--cyan); font-weight: 600;">📲 Install App</button>
             <a href="https://www.sputlab.com/donate/" target="_blank" rel="noopener" id="supportLink">☕ Support the development</a>
         </div>
     </div>
@@ -612,8 +623,13 @@
 <div id="guideModal" class="modal">
     <div class="modal-content">
         <button class="modal-close-x" data-close="guideModal">✕</button>
-        <h2>📖 StackSnap <span class="by-tag">by Sputlab.com</span></h2>
-        <div class="modal-version" id="modalVersion"></div>
+        <div style="display: flex; align-items: center; gap: 14px; margin-bottom: 8px;">
+            <img src="icons/icon-192.png" alt="StackSnap Icon" style="width: 48px; height: 48px; border-radius: 12px; box-shadow: 0 4px 16px rgba(0,0,0,0.5), 0 0 12px rgba(94,234,212,0.25); border: 1px solid rgba(255,255,255,0.14); flex-shrink: 0;">
+            <div>
+                <h2 style="margin: 0; font-size: 20px;">StackSnap <span class="by-tag">by Sputlab.com</span></h2>
+                <div class="modal-version" id="modalVersion" style="text-align: left; margin: 2px 0 0;"></div>
+            </div>
+        </div>
         <div class="tab-content" id="tabGuide">
             <p><strong>Goal:</strong> stack as many blocks as possible, centering the block that slides back and forth each time. The higher you climb, the faster the game gets and the scene turns to night: how high can you get?</p>
             <p><strong>🎮 Controls:</strong> tap the screen, click with the mouse, or press the <strong>space bar</strong> to drop the block. Press <strong>P</strong> or <strong>Esc</strong> to pause/resume. Press <strong>R</strong> at any time to restart instantly.</p>
@@ -650,10 +666,11 @@
 
 <!-- Splash Screen (quick rules) -->
 <div id="splashModal" class="modal">
-    <div class="modal-content">
-        <h2>🧱 Welcome to StackSnap!</h2>
+    <div class="modal-content" style="text-align: center;">
+        <img src="icons/icon-192.png" alt="StackSnap Icon" style="width: 76px; height: 76px; border-radius: 18px; margin: 0 auto 10px; display: block; box-shadow: 0 8px 24px rgba(0,0,0,0.55), 0 0 24px rgba(94,234,212,0.35); border: 1.5px solid rgba(255,255,255,0.18);">
+        <h2 style="margin-bottom: 2px;">Welcome to StackSnap!</h2>
         <div class="modal-version" id="splashVersion"></div>
-        <p>Stack the blocks that slide back and forth, centering them as closely as you can. The higher you climb, the faster the game gets and the scene turns to night!</p>
+        <p style="text-align: left;">Stack the blocks that slide back and forth, centering them as closely as you can. The higher you climb, the faster the game gets and the scene turns to night!</p>
         <ul>
             <li>🎮 Tap the screen, click, or press <strong>Space</strong> to drop the block (press <strong>P</strong> or <strong>Esc</strong> to pause).</li>
             <li>🎯 A <strong>Perfect</strong> hit is worth 40 points and extends your streak.</li>
@@ -701,8 +718,14 @@
 <script>
 (function(){
     // ================= VERSIONE =================
-    const APP_VERSION = '2.7.0';
+    const APP_VERSION = '2.8.0';
     const CHANGELOG = [
+        { v: '2.8.0', notes: [
+            'Official 3D App Icon suite: custom high-res icon generated and deployed across all device resolutions (1024px, 512px, 192px, maskable, Apple touch icon, and favicons)',
+            'Full PWA (Progressive Web App) offline support via Service Worker (sw.js) with asset precaching and automated cache versioning',
+            'In-game PWA installation prompt ("📲 Install App" button in the menu) with beforeinstallprompt integration',
+            'App icon displayed in the welcome splash screen, guide modal, and Open Graph social sharing cards'
+        ] },
         { v: '2.7.0', notes: [
             'Graphic Engine Overhaul: falling slice physics when overhang pieces are sliced off',
             '3D Block Shaders: chamfered corners, top specular gloss bars, rim highlights, directional drop-shadows, and landing bounce physics',
@@ -2455,6 +2478,44 @@
         ).join('');
     }
 
+    // ================= PWA & SERVICE WORKER =================
+    let deferredInstallPrompt = null;
+    const pwaInstallBtn = document.getElementById('pwaInstallBtn');
+
+    window.addEventListener('beforeinstallprompt', (e) => {
+        e.preventDefault();
+        deferredInstallPrompt = e;
+        if (pwaInstallBtn) pwaInstallBtn.style.display = 'block';
+    });
+
+    if (pwaInstallBtn) {
+        pwaInstallBtn.addEventListener('click', async () => {
+            if (!deferredInstallPrompt) return;
+            deferredInstallPrompt.prompt();
+            const choice = await deferredInstallPrompt.userChoice;
+            if (choice && choice.outcome === 'accepted') {
+                pwaInstallBtn.style.display = 'none';
+            }
+            deferredInstallPrompt = null;
+            menuPanel.style.display = 'none';
+        });
+    }
+
+    window.addEventListener('appinstalled', () => {
+        deferredInstallPrompt = null;
+        if (pwaInstallBtn) pwaInstallBtn.style.display = 'none';
+    });
+
+    function registerServiceWorker() {
+        if ('serviceWorker' in navigator && (window.location.protocol === 'https:' || window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1')) {
+            window.addEventListener('load', () => {
+                navigator.serviceWorker.register('./sw.js')
+                    .then((reg) => console.log('StackSnap PWA Service Worker registered:', reg.scope))
+                    .catch((err) => console.warn('Service Worker registration failed:', err));
+            });
+        }
+    }
+
     function setup() {
         loadBest();
         loadHighScores();
@@ -2467,6 +2528,7 @@
         fitStage();
         gameLoop();
         maybeShowSplash();
+        registerServiceWorker();
     }
     setup();
 })();

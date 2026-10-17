@@ -1,7 +1,7 @@
 # 🧱 StackSnap · Arcade Plus
 
 [![CI](https://github.com/sputlab/stacksnap/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-2.7.0-blue.svg)](index.html)
+[![Version](https://img.shields.io/badge/version-2.8.0-blue.svg)](index.html)
 [![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
 [![PWA Ready](https://img.shields.io/badge/PWA-installable-orange.svg)](manifest.json)
 [![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](#architecture--tech-stack)
@@ -39,10 +39,11 @@
   - **Overhang Debris Physics**: Cut pieces tumble down with rotational velocity and fade out.
   - **Cosmic Multi-Layer Background**: Altitude-based nebula glow, shooting meteors, parallax starfield with 4-point cross sparkles, and dual-layer city skyline with blinking beacons and illuminated windows.
 
-- **📱 Fully Responsive, PWA & Zero-Build**:
-  - Pure Vanilla JavaScript and CSS glassmorphism.
-  - Adapts to desktop monitors, tablets, and small mobile screens (e.g. iPhone 12 mini).
-  - **PWA Ready**: Tap "Add to Home Screen" on iOS and Android to play in standalone full-screen mode.
+- **📱 Full PWA (Progressive Web App) & Offline Ready**:
+  - **Custom 3D App Icon Suite**: Complete icon assets across all device resolutions (`1024px`, `512px`, `192px`, maskable Android icons, `180px` Apple touch icon, `32px`/`16px` favicons, and vector SVG).
+  - **Service Worker (`sw.js`)**: Offline playability, precaching of shell assets and fonts, and cache versioning.
+  - **Install Prompt Integration**: Tap "📲 Install App" from the in-game menu or your browser bar to install StackSnap as a native app on iOS, Android, macOS, and Windows.
+  - Pure Vanilla JavaScript and CSS glassmorphism adapting to desktop monitors, tablets, and mobile screens (e.g. iPhone 12 mini).
   - Multi-input controls: Mouse click, screen tap, or Keyboard (`Space` to drop, `P`/`Esc` to pause, `R` to restart).
 
 - **🏆 Dual Leaderboards & Persistence**:
@@ -274,6 +275,11 @@ Submits a new score to the global database, applies anti-cheat validation, and r
 
 ## 📜 Version History
 
+- **v2.8.0**:
+  - **Full PWA Suite & Custom 3D App Icon**: Dedicated 3D glowing stack icon suite generated across all resolutions (`1024px`, `512px`, `192px`, maskable Android icons, `180px` Apple touch icon, `32px`/`16px` favicons, and vector SVG).
+  - **Offline Playability**: Custom Service Worker (`sw.js`) precaching the entire game shell, icons, and fonts with automated cache versioning.
+  - **Install Prompt UI**: Added native PWA "📲 Install App" prompt in the burger menu when eligible for installation.
+  - **In-Game Icon Integration**: Visual placement of the app icon in the welcome splash screen, guide modal, and social Open Graph preview cards.
 - **v2.7.0**:
   - **Graphic Engine Overhaul**: Falling slice debris physics when blocks are sliced off (overhang pieces tumble with angular velocity and fade out).
   - **3D Block Shaders**: Chamfered corners, specular top gloss bars, rim highlights, drop shadows, golden tower aura, and landing squash-and-stretch bounce.
