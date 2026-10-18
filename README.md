@@ -1,11 +1,22 @@
-# 🧱 StackSnap · Arcade Plus
+<p align="center">
+  <img src="icons/icon-512.png" alt="StackSnap Icon" width="140" height="140" style="border-radius: 28px; box-shadow: 0 12px 32px rgba(0,0,0,0.5);" />
+</p>
 
-[![CI](https://github.com/sputlab/stacksnap/actions/workflows/ci.yml/badge.svg)](.github/workflows/ci.yml)
-[![Version](https://img.shields.io/badge/version-2.9.0-blue.svg)](index.html)
-[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg)](LICENSE)
-[![PWA Ready](https://img.shields.io/badge/PWA-installable-orange.svg)](manifest.json)
-[![Zero Dependencies](https://img.shields.io/badge/dependencies-0-brightgreen.svg)](#architecture--tech-stack)
-[![PHP](https://img.shields.io/badge/backend-PHP%20PDO%20%7C%20MySQL-8892BF.svg)](api/)
+<h1 align="center">🧱 StackSnap · Arcade Plus</h1>
+
+<p align="center">
+  <b>Addictive 3D Physics Arcade Stacking Game for the Web & Mobile</b><br>
+  <i>Built with Vanilla JavaScript, HTML5 Canvas 2D & Procedural Web Audio API</i>
+</p>
+
+<p align="center">
+  <a href=".github/workflows/ci.yml"><img src="https://github.com/sputlab/stacksnap/actions/workflows/ci.yml/badge.svg" alt="CI" /></a>
+  <a href="index.html"><img src="https://img.shields.io/badge/version-2.9.0-blue.svg" alt="Version" /></a>
+  <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-green.svg" alt="License: MIT" /></a>
+  <a href="manifest.json"><img src="https://img.shields.io/badge/PWA-installable-orange.svg" alt="PWA Ready" /></a>
+  <a href="#architecture--tech-stack"><img src="https://img.shields.io/badge/dependencies-0-brightgreen.svg" alt="Zero Dependencies" /></a>
+  <a href="api/"><img src="https://img.shields.io/badge/backend-PHP%20PDO%20%7C%20MySQL-8892BF.svg" alt="PHP" /></a>
+</p>
 
 > **StackSnap** is an addictive, fast-paced arcade browser game built with pure **HTML5 Canvas**, **Vanilla JavaScript**, and a procedural **Web Audio API** synthesizer. Stack moving blocks as high as possible, center each slice, trigger multiplier combos, collect power-up crystals, unlock achievements, and compete on the global leaderboard!
 
